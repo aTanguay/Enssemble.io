@@ -1,7 +1,7 @@
-1. ⁠Ask, don't assume. If something is unclear, ask before writing a  single line. Never make silent assumptions about intent, architecture,  or requirements.
-2. ⁠Simplest solution  first. Always implement the simplest thing that could work. Do not add  abstractions or flexibility that weren't explicitly requested.
-3. ⁠Don't touch unrelated code. If a file or function is not directly part of the current task, do not modify it, even if you think it could be  improved.
-4. ⁠Flag uncertainty explicitly.  If you are not confident about an approach or technical detail, say so  before proceeding. Confidence without certainty causes more damage than  admitting a gap.
+1. Ask, don't assume. If something is unclear, ask before writing a single line. Never make silent assumptions about intent, architecture, or requirements.
+2. Simplest solution first. Always implement the simplest thing that could work. Do not add abstractions or flexibility that weren't explicitly requested.
+3. Don't touch unrelated code. If a file or function is not directly part of the current task, do not modify it, even if you think it could be improved.
+4. Flag uncertainty explicitly. If you are not confident about an approach or technical detail, say so before proceeding. Confidence without certainty causes more damage than admitting a gap.
 
 ## AI Assistant Session Workflow
 
@@ -21,35 +21,24 @@
 
 **Session History**: See end of `PLANNING.md` for development session logs
 
-
-
-
-
 ### Code Review Checklist
 
 Before committing changes, verify:
 
-- [ ] Version number incremented in filename
-- [ ] All imports present and correct
-- [ ] Error handling added for new operations
-- [ ] UI elements use customtkinter (ctk) components
-- [ ] Mono conversion preserved in audio processing
-- [ ] Cue point calculation logic intact
-- [ ] Print statements for user feedback
-- [ ] Success/error messageboxes for important operations
-- [ ] File paths handled with os.path
+- [ ] Code compiles cleanly with `idf.py build`
+- [ ] All `#include` directives present and correct
+- [ ] Error handling uses ESP-IDF patterns (`ESP_ERROR_CHECK`, `esp_err_t`)
+- [ ] Platform-specific code isolated in appropriate components
+- [ ] Shared BLE/MIDI layer remains platform-agnostic
 - [ ] No hardcoded absolute paths
-- [ ] README.md updated with version number
-- [ ] Code tested with multiple WAV files
-- [ ] Output verified in audio editor
+- [ ] README.md updated if user-facing behavior changed
+- [ ] Tested on target hardware if available
 
 ### When Making Changes
 
-1. **Create new version file** - don't overwrite existing working versions
-2. **Increment version number appropriately** - follow the established pattern
-3. **Add error handling** - use try/except with messagebox.showerror
-4. **Maintain UI consistency** - keep customtkinter style and 350x510 window size
-5. **Update README.md** - reflect version changes and new features
-6. **Test with real M8 hardware if possible** - or at minimum verify cue points in audio editor
-7. **Document known issues** - be transparent about limitations
-
+1. **Build before committing** — `idf.py build` must pass
+2. **Keep platform code separate** — XIAO/SAM2695 and AMYboard/AMY in their own components
+3. **Add error handling** — use ESP-IDF error checking patterns
+4. **Update README.md** — reflect any user-facing changes
+5. **Test with real hardware if possible** — or at minimum verify BLE advertising and MIDI parsing in logs
+6. **Document known issues** — be transparent about limitations
