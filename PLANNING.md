@@ -41,14 +41,16 @@ ESP-IDF firmware working on AMYboard. Two firmware variants ready. Three AMYboar
 
 AMY handles internally: CC 0 (bank select), CC 64 (sustain), CC 123 (all notes off).
 
-### Planned Band Members
-| Name | Channel | Patch | Role |
-|------|---------|-------|------|
-| Jami | 2 | 80 | Lead |
-| Kneel | 3 | 32 | Bass |
-| Mowss | 4 | 88 | Pads |
-| Bowee | 5 | 48 | Strings |
-| Ryngo | 10 | 0 | Drums |
+### The Band — Full Roster
+*Names riff on famous musicians. Configs in `AmyBoard/configs/`.*
+
+| Name | Inspiration | Channel | Default Patch | Role | Firmware | Status |
+|------|-------------|---------|---------------|------|----------|--------|
+| EEnoo | Brian Eno | 1 | Juno #47 Synth Pad | Pads/Ambient | EEnoo | ✅ Ready |
+| Pryns | Prince | 2 | Juno #32 Lead I | Lead | EEnoo | ✅ Ready |
+| Aufde | Melissa Auf der Maur | 3 | Juno #31 Synth Bass I | Bass | EEnoo | ✅ Ready |
+| Kneel | Neal Peart | 10 | SD card kits | Drums | SmplCty | ✅ Ready |
+| Dapht | Daft Punk | TBD | SD card samples | Samples/Vocal | TBD | 🔮 Future |
 
 ---
 
