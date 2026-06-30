@@ -90,7 +90,8 @@ Knobs: Filter, Reso, Reverb/Vol, Chorus/Pan.
   LabelPad 4, {Sustain}
   LabelPad 5, {Reset CC}
   LabelPad 6, { }
-  LabelPad 7, { }
+  ColorPad 7, 1
+  LabelPad 7, {PANIC!}
 
   // Row 2: Patch browsing
   ColorPad 8, 2
@@ -235,6 +236,17 @@ Knobs: Filter, Reso, Reverb/Vol, Chorus/Pan.
     SendMIDIOut 0xB0 + currentChannel, 10, panVal
     Call @UpdateKnobs
     FlashPad 5
+  elseif pad = 7
+    // MIDI Panic — all sound off + all notes off on all channels
+    for ch = 0 to 15
+      SendMIDIOut 0xB0 + ch, 120, 0
+      SendMIDIOut 0xB0 + ch, 123, 0
+      SendMIDIOut 0xB0 + ch, 64, 0
+    endfor
+    sustainOn = NO
+    LatchPad 4, NO
+    FlashPad 7
+    Log {PANIC! All notes off}
   elseif pad = 8
     // Previous patch
     p = chPatch[currentChannel]
