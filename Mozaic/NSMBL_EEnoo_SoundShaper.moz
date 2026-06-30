@@ -1,23 +1,29 @@
 // NSMBL EEnoo Sound Shaper
 //
 // Real-time sound control for NSMBL_EEnoo AMY synth.
-// Knobs: Filter Cutoff, Resonance, Volume, Pan
+// Knobs: Filter Cutoff, Resonance, Reverb, Chorus
 // Pads: Channel select, sustain, test notes
 //
-// AMY's built-in Juno handler responds to:
-//   CC 70 = Filter Frequency (exponential ~13Hz-6400Hz)
-//   CC 71 = Resonance (Q 0.5-16)
+// NSMBL CC Map (handled in firmware):
 //   CC 7  = Volume
 //   CC 10 = Pan
-//   CC 64 = Sustain pedal
-//   CC 1  = Mod wheel
+//   CC 70 = Filter Cutoff
+//   CC 71 = Resonance
+//   CC 75 = Chorus Level
+//   CC 91 = Reverb Level
+//   CC 93 = Chorus Level (alt)
+//
+// Handled by AMY internally:
+//   CC 0  = Bank Select
+//   CC 64 = Sustain Pedal
+//   CC 123 = All Notes Off
 
 @Description
 Sound shaper for NSMBL_EEnoo AMY synth.
 Knob 0: Filter Cutoff (CC 70)
 Knob 1: Resonance (CC 71)
-Knob 2: Volume (CC 7)
-Knob 3: Mod Wheel (CC 1)
+Knob 2: Reverb (CC 91)
+Knob 3: Chorus (CC 93)
 Pads: Channel select, sustain, test notes.
 @End
 
@@ -31,8 +37,8 @@ Pads: Channel select, sustain, test notes.
     currentChannel = 0
     filterVal = 64
     resoVal = 0
-    volVal = 100
-    modVal = 0
+    reverbVal = 0
+    chorusVal = 0
     sustainOn = NO
   endif
   Call @InitUI
@@ -45,8 +51,8 @@ Pads: Channel select, sustain, test notes.
 
   Call @UpdateFilterKnob
   Call @UpdateResoKnob
-  Call @UpdateVolKnob
-  Call @UpdateModKnob
+  Call @UpdateReverbKnob
+  Call @UpdateChorusKnob
   Call @LabelAllPads
 @End
 
@@ -62,14 +68,14 @@ Pads: Channel select, sustain, test notes.
   LabelKnob 1, {Reso }, resoVal
 @End
 
-@UpdateVolKnob
-  SetKnobValue 2, volVal
-  LabelKnob 2, {Vol }, volVal
+@UpdateReverbKnob
+  SetKnobValue 2, reverbVal
+  LabelKnob 2, {Reverb }, reverbVal
 @End
 
-@UpdateModKnob
-  SetKnobValue 3, modVal
-  LabelKnob 3, {Mod }, modVal
+@UpdateChorusKnob
+  SetKnobValue 3, chorusVal
+  LabelKnob 3, {Chorus }, chorusVal
 @End
 
 // --- Pad Layout ---
@@ -83,7 +89,7 @@ Pads: Channel select, sustain, test notes.
   LabelPad 0, {Juno Ch1}
   LabelPad 1, {DX7 Ch2}
   LabelPad 2, {Drums 10}
-  LabelPad 3, {All Ch}
+  LabelPad 3, {Vol/Pan}
 
   // Row 1 right side: utilities
   ColorPad 4, 3
@@ -147,15 +153,15 @@ Pads: Channel select, sustain, test notes.
     SendMIDIOut 0xB0 + currentChannel, 71, resoVal
     LabelKnob 1, {Reso }, resoVal
   elseif knob = 2
-    // Volume - CC 7
-    volVal = knobval
-    SendMIDIOut 0xB0 + currentChannel, 7, volVal
-    LabelKnob 2, {Vol }, volVal
+    // Reverb - CC 91
+    reverbVal = knobval
+    SendMIDIOut 0xB0 + currentChannel, 91, reverbVal
+    LabelKnob 2, {Reverb }, reverbVal
   elseif knob = 3
-    // Mod Wheel - CC 1
-    modVal = knobval
-    SendMIDIOut 0xB0 + currentChannel, 1, modVal
-    LabelKnob 3, {Mod }, modVal
+    // Chorus - CC 93
+    chorusVal = knobval
+    SendMIDIOut 0xB0 + currentChannel, 93, chorusVal
+    LabelKnob 3, {Chorus }, chorusVal
   endif
 @End
 
@@ -180,8 +186,9 @@ Pads: Channel select, sustain, test notes.
     Call @HighlightChannel
     LabelPads {GM Drums (Ch 10)}
   elseif pad = 3
-    // All channels - send to current
-    LabelPads {All Channels}
+    // Vol/Pan mode - swap knobs 2+3 to volume and pan
+    LabelPads {Volume / Pan Mode}
+    LatchPad 3, YES
   elseif pad = 4
     // Sustain toggle
     if sustainOn = NO
@@ -197,16 +204,16 @@ Pads: Channel select, sustain, test notes.
     // Reset all CCs to defaults
     filterVal = 64
     resoVal = 0
-    volVal = 100
-    modVal = 0
+    reverbVal = 0
+    chorusVal = 0
     SendMIDIOut 0xB0 + currentChannel, 70, filterVal
     SendMIDIOut 0xB0 + currentChannel, 71, resoVal
-    SendMIDIOut 0xB0 + currentChannel, 7, volVal
-    SendMIDIOut 0xB0 + currentChannel, 1, modVal
+    SendMIDIOut 0xB0 + currentChannel, 91, reverbVal
+    SendMIDIOut 0xB0 + currentChannel, 93, chorusVal
     Call @UpdateFilterKnob
     Call @UpdateResoKnob
-    Call @UpdateVolKnob
-    Call @UpdateModKnob
+    Call @UpdateReverbKnob
+    Call @UpdateChorusKnob
     FlashPad 5
   elseif pad >= 8 and pad <= 15
     // Test notes: C3 D3 E3 F3 G3 A3 B3 C4

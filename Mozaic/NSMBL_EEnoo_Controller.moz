@@ -1,0 +1,267 @@
+// NSMBL EEnoo Controller
+//
+// All-in-one control surface for NSMBL_EEnoo AMY synth.
+// Combines patch selection and sound shaping.
+//
+// Knobs change function based on mode:
+//   Default: Filter, Resonance, Reverb, Chorus
+//   Vol/Pan: Filter, Resonance, Volume, Pan
+//
+// Bottom row: patch browsing (prev/next) per channel
+//
+// NSMBL CC Map (firmware):
+//   CC 7  = Volume       CC 70 = Filter Cutoff
+//   CC 10 = Pan          CC 71 = Resonance
+//   CC 75 = Chorus       CC 91 = Reverb
+//   CC 93 = Chorus (alt)
+
+@Description
+All-in-one controller for NSMBL_EEnoo.
+Top row: channel select, sustain, modes.
+Bottom row: patch browsing.
+Knobs: Filter, Reso, Reverb/Vol, Chorus/Pan.
+@End
+
+@OnLoad
+  Call @Init
+@End
+
+@Init
+  if Unassigned modinit
+    modinit = YES
+    currentChannel = 0
+    filterVal = 64
+    resoVal = 0
+    reverbVal = 0
+    chorusVal = 0
+    volVal = 100
+    panVal = 64
+    sustainOn = NO
+    volPanMode = NO
+    FillArray chPatch, 0, 16
+  endif
+  Call @InitUI
+@End
+
+@InitUI
+  ShowLayout 2
+  SetShortName {EEnoo}
+  LabelPads {NSMBL EEnoo Controller}
+  Call @UpdateKnobs
+  Call @LabelAllPads
+@End
+
+// --- Knob Display ---
+
+@UpdateKnobs
+  SetKnobValue 0, filterVal
+  LabelKnob 0, {Filter }, filterVal
+  SetKnobValue 1, resoVal
+  LabelKnob 1, {Reso }, resoVal
+  if volPanMode = YES
+    SetKnobValue 2, volVal
+    LabelKnob 2, {Vol }, volVal
+    SetKnobValue 3, panVal
+    LabelKnob 3, {Pan }, panVal
+  else
+    SetKnobValue 2, reverbVal
+    LabelKnob 2, {Reverb }, reverbVal
+    SetKnobValue 3, chorusVal
+    LabelKnob 3, {Chorus }, chorusVal
+  endif
+@End
+
+// --- Pad Layout ---
+
+@LabelAllPads
+  // Row 1: Channel selectors + utilities
+  ColorPad 0, 2
+  ColorPad 1, 0
+  ColorPad 2, 1
+  ColorPad 3, 3
+  ColorPad 4, 3
+  ColorPad 5, 3
+  ColorPad 6, 3
+  ColorPad 7, 3
+  LabelPad 0, {Juno Ch1}
+  LabelPad 1, {DX7 Ch2}
+  LabelPad 2, {Drums 10}
+  LabelPad 3, {Vol/Pan}
+  LabelPad 4, {Sustain}
+  LabelPad 5, {Reset CC}
+  LabelPad 6, { }
+  LabelPad 7, { }
+
+  // Row 2: Patch browsing
+  ColorPad 8, 2
+  ColorPad 9, 2
+  ColorPad 10, 0
+  ColorPad 11, 0
+  ColorPad 12, 0
+  ColorPad 13, 0
+  ColorPad 14, 0
+  ColorPad 15, 0
+  LabelPad 10, { }
+  LabelPad 11, { }
+  LabelPad 12, { }
+  LabelPad 13, { }
+  LabelPad 14, { }
+  LabelPad 15, { }
+
+  Call @HighlightChannel
+  Call @UpdatePatchDisplay
+@End
+
+@HighlightChannel
+  LatchPad 0, NO
+  LatchPad 1, NO
+  LatchPad 2, NO
+  if currentChannel = 0
+    LatchPad 0, YES
+  elseif currentChannel = 1
+    LatchPad 1, YES
+  elseif currentChannel = 9
+    LatchPad 2, YES
+  endif
+  if volPanMode = YES
+    LatchPad 3, YES
+  else
+    LatchPad 3, NO
+  endif
+@End
+
+@UpdatePatchDisplay
+  p = chPatch[currentChannel]
+  LabelPad 8, {<< Prev}
+  LabelPad 9, {Next >>}
+  if currentChannel = 0
+    LabelPads {Juno Patch }, p
+  elseif currentChannel = 1
+    LabelPads {DX7 Patch }, p
+  elseif currentChannel = 9
+    LabelPads {Drums}
+  else
+    LabelPads {Ch }, currentChannel + 1, { Patch }, p
+  endif
+@End
+
+// --- Knob Handlers ---
+
+@OnKnobChange
+  knob = LastKnob
+  knobval = GetKnobValue knob
+
+  if knob = 0
+    filterVal = knobval
+    SendMIDIOut 0xB0 + currentChannel, 70, filterVal
+    LabelKnob 0, {Filter }, filterVal
+  elseif knob = 1
+    resoVal = knobval
+    SendMIDIOut 0xB0 + currentChannel, 71, resoVal
+    LabelKnob 1, {Reso }, resoVal
+  elseif knob = 2
+    if volPanMode = YES
+      volVal = knobval
+      SendMIDIOut 0xB0 + currentChannel, 7, volVal
+      LabelKnob 2, {Vol }, volVal
+    else
+      reverbVal = knobval
+      SendMIDIOut 0xB0 + currentChannel, 91, reverbVal
+      LabelKnob 2, {Reverb }, reverbVal
+    endif
+  elseif knob = 3
+    if volPanMode = YES
+      panVal = knobval
+      SendMIDIOut 0xB0 + currentChannel, 10, panVal
+      LabelKnob 3, {Pan }, panVal
+    else
+      chorusVal = knobval
+      SendMIDIOut 0xB0 + currentChannel, 93, chorusVal
+      LabelKnob 3, {Chorus }, chorusVal
+    endif
+  endif
+@End
+
+// --- Pad Handlers ---
+
+@OnPadDown
+  pad = LastPad
+
+  if pad = 0
+    currentChannel = 0
+    Call @HighlightChannel
+    Call @UpdatePatchDisplay
+  elseif pad = 1
+    currentChannel = 1
+    Call @HighlightChannel
+    Call @UpdatePatchDisplay
+  elseif pad = 2
+    currentChannel = 9
+    Call @HighlightChannel
+    Call @UpdatePatchDisplay
+  elseif pad = 3
+    // Toggle Vol/Pan mode
+    if volPanMode = YES
+      volPanMode = NO
+    else
+      volPanMode = YES
+    endif
+    Call @HighlightChannel
+    Call @UpdateKnobs
+  elseif pad = 4
+    // Sustain toggle
+    if sustainOn = NO
+      sustainOn = YES
+      LatchPad 4, YES
+      SendMIDIOut 0xB0 + currentChannel, 64, 127
+    else
+      sustainOn = NO
+      LatchPad 4, NO
+      SendMIDIOut 0xB0 + currentChannel, 64, 0
+    endif
+  elseif pad = 5
+    // Reset all CCs
+    filterVal = 64
+    resoVal = 0
+    reverbVal = 0
+    chorusVal = 0
+    volVal = 100
+    panVal = 64
+    SendMIDIOut 0xB0 + currentChannel, 70, filterVal
+    SendMIDIOut 0xB0 + currentChannel, 71, resoVal
+    SendMIDIOut 0xB0 + currentChannel, 91, reverbVal
+    SendMIDIOut 0xB0 + currentChannel, 93, chorusVal
+    SendMIDIOut 0xB0 + currentChannel, 7, volVal
+    SendMIDIOut 0xB0 + currentChannel, 10, panVal
+    Call @UpdateKnobs
+    FlashPad 5
+  elseif pad = 8
+    // Previous patch
+    p = chPatch[currentChannel]
+    if p > 0
+      p = p - 1
+    else
+      p = 127
+    endif
+    chPatch[currentChannel] = p
+    SendMIDIOut 0xC0 + currentChannel, p
+    FlashPad 8
+    Call @UpdatePatchDisplay
+  elseif pad = 9
+    // Next patch
+    p = chPatch[currentChannel]
+    if p < 127
+      p = p + 1
+    else
+      p = 0
+    endif
+    chPatch[currentChannel] = p
+    SendMIDIOut 0xC0 + currentChannel, p
+    FlashPad 9
+    Call @UpdatePatchDisplay
+  endif
+@End
+
+@OnMidiInput
+  SendMIDIThru
+@End

@@ -6,8 +6,82 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <math.h>
 
 static const char *TAG = "synth";
+
+// --- MIDI CC Handler ---
+// Replaces AMY's built-in juno_filter_midi_handler with a more complete
+// mapping that works on all channels. Any MIDI controller can use these.
+//
+//   CC 1  — Mod Wheel (placeholder, logged only)
+//   CC 7  — Channel Volume
+//   CC 10 — Pan (0=left, 64=center, 127=right)
+//   CC 70 — Filter Cutoff (exponential, ~13Hz to ~6400Hz)
+//   CC 71 — Filter Resonance (Q 0.5 to 16)
+//   CC 75 — Chorus Level (0=dry, 127=full)
+//   CC 91 — Reverb Level (0=dry, 127=full)
+//   CC 93 — Chorus Level (alternate standard CC)
+//
+// CCs handled by AMY internally (do not duplicate):
+//   CC 0  — Bank Select
+//   CC 64 — Sustain Pedal
+//   CC 123 — All Notes Off
+
+static void nsmbl_midi_cc_handler(uint8_t *bytes, uint16_t len, uint8_t is_sysex)
+{
+    uint8_t status = bytes[0] & 0xF0;
+    if (status != 0xB0) return;
+
+    uint8_t channel = (bytes[0] & 0x0F) + 1;  // AMY synths are 1-indexed
+    uint8_t cc = bytes[1];
+    uint8_t val = bytes[2];
+    float normalized = (float)val / 127.0f;
+    amy_event e;
+
+    switch (cc) {
+    case 7:  // Volume — scale amplitude
+        e = amy_default_event();
+        e.synth = channel;
+        e.amp_coefs[COEF_CONST] = normalized;
+        amy_add_event(&e);
+        break;
+
+    case 10:  // Pan — 0.0 left, 0.5 center, 1.0 right
+        e = amy_default_event();
+        e.synth = channel;
+        e.pan_coefs[COEF_CONST] = normalized;
+        amy_add_event(&e);
+        break;
+
+    case 70:  // Filter Cutoff — exponential mapping from AMY's example
+        e = amy_default_event();
+        e.synth = channel;
+        e.filter_freq_coefs[COEF_CONST] = exp2f(0.0938f * (float)val);
+        amy_add_event(&e);
+        break;
+
+    case 71:  // Resonance — exponential Q 0.5-16
+        e = amy_default_event();
+        e.synth = channel;
+        e.resonance = 0.7f * exp2f(0.03125f * (float)val);
+        amy_add_event(&e);
+        break;
+
+    case 75:  // Chorus Level
+    case 93:  // Chorus Send (standard GM CC)
+        e = amy_default_event();
+        e.chorus_level = normalized;
+        amy_add_event(&e);
+        break;
+
+    case 91:  // Reverb Level
+        e = amy_default_event();
+        e.reverb_level = normalized;
+        amy_add_event(&e);
+        break;
+    }
+}
 
 static void midi_to_amy(const midi_event_t *event)
 {
@@ -92,7 +166,10 @@ void synth_engine_init(QueueHandle_t midi_queue)
     config.ram_caps_sysex = MALLOC_CAP_SPIRAM;
     amy_start(config);
 
-    ESP_LOGI(TAG, "AMY synth engine initialized (%d oscs)", AMY_OSCS);
+    // Replace AMY's built-in Juno-only CC handler with our expanded version
+    amy_global.config.amy_external_midi_input_hook = nsmbl_midi_cc_handler;
+
+    ESP_LOGI(TAG, "AMY synth engine initialized (%d oscs, NSMBL CC handler active)", AMY_OSCS);
 
     xTaskCreatePinnedToCore(synth_task, "synth", 4096, midi_queue, 5, NULL, SYNTH_CORE);
 }
