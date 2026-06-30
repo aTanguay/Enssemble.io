@@ -22,15 +22,25 @@
 - [x] BLE MIDI shared from SmplCty codebase
 - [x] End-to-end verified: iPhone → BLE MIDI → AMY synth playback
 
-## Phase 2 — Multi-Unit & UX (Next)
+## Phase 2 — Multi-Unit & UX (In Progress)
 
+### Done
+- [x] Full CC passthrough — NSMBL CC handler: volume, pan, filter, resonance, reverb, chorus (all channels)
+- [x] Pitch Bend passthrough (working since EEnoo launch)
+- [x] Per-unit MIDI channel filtering (configurable via config.h, 0=all)
+- [x] Mozaic control surface — patch browsing, sound shaping, sustain, panic
+
+### Next — MVP for Spatial Composition
+- [ ] Flash 3 AMYboards with EEnoo firmware
+- [ ] Verify 3-unit simultaneous BLE connection from iPhone
+- [ ] Assign each unit a dedicated channel/role (e.g. pads, bass, lead)
+- [ ] First spatial composition test with speakers
+
+### Later
 - [ ] Kit switching via MIDI Program Change (SmplCty)
 - [ ] Modulino Buttons + Knob I2C drivers (when hardware arrives)
 - [ ] BLE-to-DIN MIDI bridge mode (forward BLE MIDI out GPIO 14/15)
-- [ ] Per-unit MIDI channel filtering (configurable)
-- [ ] Full CC passthrough (volume, pan, expression, sustain, mod, effects)
-- [ ] Pitch Bend and Aftertouch passthrough
 - [ ] Curated preset system per band role
 - [ ] Favorite voice slots stored in NVS flash
 - [ ] Reconnection handling — auto re-advertise after iOS disconnects
-- [ ] Multi-unit simultaneous operation verified
+- [ ] Per-unit Mozaic scripts (one controller per band member)

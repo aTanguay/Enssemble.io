@@ -14,13 +14,32 @@ The firmware is built with **ESP-IDF** and targets two hardware platforms:
 
 ## Current Status
 
-ESP-IDF firmware working on AMYboard. Two band members operational.
+ESP-IDF firmware working on AMYboard. Two firmware variants ready. Three AMYboards available for spatial deployment. Mozaic iOS control surface replaces planned TouchOSC phase. Approaching MVP for first spatial composition.
 
 ### Working Band Members (ESP-IDF)
 | Name | Firmware | Platform | Role | Status |
 |------|----------|----------|------|--------|
 | NSMBL_SmplCty | `AmyBoard/NSMBL_SmplCty/` | AMYboard | 16-slice drum sample player (WAV/SD) | ✅ Verified |
 | NSMBL_EEnoo | `AmyBoard/NSMBL_EEnoo/` | AMYboard | AMY synth (Juno ch1, DX7 ch2, drums ch10) | ✅ Verified |
+
+### iOS Control Surface (Mozaic)
+| Script | Purpose | Status |
+|--------|---------|--------|
+| `NSMBL_EEnoo_Controller.moz` | Unified patch browser + sound shaper + panic | ✅ Working |
+| `NSMBL_EEnoo_PatchSelect.moz` | Simple patch bank selector (superseded) | ✅ Working |
+| `NSMBL_EEnoo_SoundShaper.moz` | CC knobs only (superseded) | ✅ Working |
+
+### NSMBL CC Map (firmware, all channels)
+| CC | Function | Range |
+|----|----------|-------|
+| 7 | Volume | 0-127 linear |
+| 10 | Pan | 0=L, 64=center, 127=R |
+| 70 | Filter Cutoff | Exponential ~13Hz-6400Hz |
+| 71 | Resonance | Exponential Q 0.5-16 |
+| 75/93 | Chorus Level | 0=dry, 127=full |
+| 91 | Reverb Level | 0=dry, 127=full |
+
+AMY handles internally: CC 0 (bank select), CC 64 (sustain), CC 123 (all notes off).
 
 ### Planned Band Members
 | Name | Channel | Patch | Role |
@@ -109,14 +128,17 @@ XIAO (ESP32-C3, single-core — future):
 - [ ] Adapt single-core architecture (C3 has one core)
 - [ ] Validate same BLE MIDI layer works on both platforms
 
-### Phase 3 — TouchOSC Control Surface
-*A dedicated iOS editor/performance panel*
+### Phase 3 — ~~TouchOSC~~ Mozaic Control Surface ✅
+*Replaced TouchOSC plan with Mozaic iOS scripts — simpler, more flexible, already working.*
 
-- [ ] Design TouchOSC layout for full control
-- [ ] Instrument picker — category grid -> instrument grid -> sends PC
-- [ ] Per-unit channel strip: volume, pan, expression, instrument name
-- [ ] Effects panel: reverb type/send, chorus type/send
-- [ ] Multi-unit page — one tab per band member
+- [x] Patch browsing (prev/next per channel)
+- [x] Sound shaping knobs (filter, resonance, reverb, chorus)
+- [x] Volume/Pan mode toggle
+- [x] Channel selector (Juno/DX7/Drums)
+- [x] Sustain toggle
+- [x] CC reset
+- [x] MIDI Panic (all sound off, all channels)
+- [ ] Multi-unit page — one Mozaic instance per band member
 
 ### Phase 4 — Deep Synth Control
 *Platform-specific advanced features*
@@ -177,13 +199,17 @@ XIAO (ESP32-C3, single-core — future):
 
 ## Session Log
 
-### 2026-06-30 — NSMBL_EEnoo (AMY Synth) Working
+### 2026-06-30 — NSMBL_EEnoo + Mozaic Control Surface
 - Integrated AMY synth engine as ESP-IDF component (250 oscillators)
 - AMY handles I2S, dual-core rendering, and voice management internally
 - Default synths: Juno-6 (ch1), DX7 (ch2), GM drums (ch10)
 - All-channel MIDI pass-through (no channel filter)
 - Reorganized project: `AmyBoard/NSMBL_SmplCty/` and `AmyBoard/NSMBL_EEnoo/`
-- Two band members working on same hardware platform
+- Custom NSMBL CC handler replacing AMY's Juno-only example — filter, resonance, reverb, chorus, volume, pan on all channels
+- Mozaic iOS control surface: learned API from scratch, built 3 scripts
+- Unified Controller script: patch browsing, sound shaping, sustain, panic
+- Phase 3 (TouchOSC) rendered unnecessary by Mozaic approach
+- Three AMYboards available for first spatial composition test
 
 ### 2026-06-29 — NSMBL_SmplCty (Sample Player) Working
 - First ESP-IDF firmware from scratch — BLE MIDI + sample playback
