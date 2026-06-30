@@ -1,0 +1,132 @@
+// NSMBL EEnoo Patch Selector
+//
+// Patch selector for NSMBL_EEnoo AMY synth.
+// Top row: Juno-6 patch banks (Ch 1)
+// Bottom row: DX7 patch banks (Ch 2)
+// Knob 0: Fine-tune patch number (0-127)
+// All other MIDI passes through.
+
+@Description
+Patch selector for NSMBL_EEnoo AMY synth.
+Knob 0 selects patch (0-127).
+Pads switch between Juno (Ch1) and DX7 (Ch2).
+Passes all other MIDI through.
+@End
+
+@OnLoad
+  Call @Init
+@End
+
+@Init
+  if Unassigned modinit
+    modinit = YES
+    currentPatch = 0
+    currentChannel = 0
+  endif
+  Call @InitUI
+@End
+
+@InitUI
+  ShowLayout 2
+  SetShortName {EEnoo}
+  LabelPads {NSMBL EEnoo Patch Selector}
+
+  LabelKnob 0, {Patch 0}
+  SetKnobValue 0, 0
+  LabelKnob 1, { }
+  SetKnobValue 1, 0
+  LabelKnob 2, { }
+  SetKnobValue 2, 0
+  LabelKnob 3, { }
+  SetKnobValue 3, 0
+
+  Call @LabelAllPads
+@End
+
+@LabelAllPads
+  // Row 1: Juno patches (channel 1)
+  ColorPad 0, 2
+  ColorPad 1, 2
+  ColorPad 2, 2
+  ColorPad 3, 2
+  ColorPad 4, 2
+  ColorPad 5, 2
+  ColorPad 6, 2
+  ColorPad 7, 2
+  LabelPad 0, {Juno 0}
+  LabelPad 1, {Juno 16}
+  LabelPad 2, {Juno 32}
+  LabelPad 3, {Juno 48}
+  LabelPad 4, {Juno 64}
+  LabelPad 5, {Juno 80}
+  LabelPad 6, {Juno 96}
+  LabelPad 7, {Juno 112}
+
+  // Row 2: DX7 patches (channel 2)
+  ColorPad 8, 0
+  ColorPad 9, 0
+  ColorPad 10, 0
+  ColorPad 11, 0
+  ColorPad 12, 0
+  ColorPad 13, 0
+  ColorPad 14, 0
+  ColorPad 15, 0
+  LabelPad 8, {DX7 0}
+  LabelPad 9, {DX7 16}
+  LabelPad 10, {DX7 32}
+  LabelPad 11, {DX7 48}
+  LabelPad 12, {DX7 64}
+  LabelPad 13, {DX7 80}
+  LabelPad 14, {DX7 96}
+  LabelPad 15, {DX7 112}
+
+  Call @HighlightActive
+@End
+
+@HighlightActive
+  // Unlatch all
+  for p = 0 to 15
+    LatchPad p, NO
+  endfor
+  // Highlight the active bank
+  bankPad = currentPatch / 16
+  if currentChannel = 0
+    LatchPad bankPad, YES
+  else
+    LatchPad bankPad + 8, YES
+  endif
+@End
+
+@OnPadDown
+  pad = LastPad
+  if pad <= 7
+    // Juno (channel 0 = MIDI ch 1)
+    currentChannel = 0
+    currentPatch = pad * 16
+  else
+    // DX7 (channel 1 = MIDI ch 2)
+    currentChannel = 1
+    currentPatch = (pad - 8) * 16
+  endif
+  SetKnobValue 0, currentPatch
+  LabelKnob 0, {Patch }, currentPatch
+  SendMIDIOut 0xC0 + currentChannel, currentPatch
+  FlashPad pad
+  Log {Ch }, currentChannel + 1, { Patch }, currentPatch
+  Call @HighlightActive
+@End
+
+@OnKnobChange
+  if LastKnob = 0
+    currentPatch = GetKnobValue 0
+    LabelKnob 0, {Patch }, currentPatch
+    SendMIDIOut 0xC0 + currentChannel, currentPatch
+    Log {Ch }, currentChannel + 1, { Patch }, currentPatch
+    Call @HighlightActive
+  endif
+@End
+
+@OnMidiInput
+  // Pass all MIDI through
+  SendMIDIThru
+@End
