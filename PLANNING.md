@@ -16,11 +16,13 @@ The firmware is built with **ESP-IDF** and targets two hardware platforms:
 
 ESP-IDF firmware working on AMYboard. Two firmware variants ready. Three AMYboards available for spatial deployment. Mozaic iOS control surface replaces planned TouchOSC phase. Approaching MVP for first spatial composition.
 
-### Working Band Members (ESP-IDF)
-| Name | Firmware | Platform | Role | Status |
-|------|----------|----------|------|--------|
-| NSMBL_SmplCty | `AmyBoard/NSMBL_SmplCty/` | AMYboard | 16-slice drum sample player (WAV/SD) | ✅ Verified |
-| NSMBL_EEnoo | `AmyBoard/NSMBL_EEnoo/` | AMYboard | AMY synth (Juno ch1, DX7 ch2, drums ch10) | ✅ Verified |
+### Firmware Variants
+| Firmware | Directory | Purpose | Status |
+|----------|-----------|---------|--------|
+| NSMBL_Synth | `AmyBoard/NSMBL_Synth/` | AMY synth engine (Juno, DX7, drums) | ✅ Verified |
+| NSMBL_SampleKits | `AmyBoard/NSMBL_SampleKits/` | 16-slice WAV sample player (SD card) | ✅ Verified |
+
+Band member identity is set via `config.h` — copy from `AmyBoard/configs/` before building.
 
 ### iOS Control Surface (Mozaic)
 | Script | Purpose | Status |
@@ -46,10 +48,10 @@ AMY handles internally: CC 0 (bank select), CC 64 (sustain), CC 123 (all notes o
 
 | Name | Inspiration | Channel | Default Patch | Role | Firmware | Status |
 |------|-------------|---------|---------------|------|----------|--------|
-| EEnoo | Brian Eno | 1 | Juno #47 Synth Pad | Pads/Ambient | EEnoo | ✅ Ready |
-| Pryns | Prince | 2 | Juno #32 Lead I | Lead | EEnoo | ✅ Ready |
-| Aufde | Melissa Auf der Maur | 3 | Juno #31 Synth Bass I | Bass | EEnoo | ✅ Ready |
-| Kneel | Neal Peart | 10 | SD card kits | Drums | SmplCty | ✅ Ready |
+| EEnoo | Brian Eno | 1 | Juno #47 Synth Pad | Pads/Ambient | NSMBL_Synth | ✅ Ready |
+| Pryns | Prince | 2 | Juno #32 Lead I | Lead | NSMBL_Synth | ✅ Ready |
+| Aufde | Melissa Auf der Maur | 3 | Juno #31 Synth Bass I | Bass | NSMBL_Synth | ✅ Ready |
+| Kneel | Neal Peart | 10 | SD card kits | Drums | NSMBL_SampleKits | ✅ Ready |
 | Dapht | Daft Punk | TBD | SD card samples | Samples/Vocal | TBD | 🔮 Future |
 
 ---

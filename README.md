@@ -41,11 +41,11 @@ Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing
 
 ## Firmware Variants
 
-### NSMBL_EEnoo — AMY Synth (`AmyBoard/NSMBL_EEnoo/`)
-Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX7 (ch2), GM drums (ch10). Supports program change to browse all 256 patches. Custom NSMBL CC handler for real-time sound shaping.
+### NSMBL_Synth — AMY Synth (`AmyBoard/NSMBL_Synth/`)
+Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX7 (ch2), GM drums (ch10). Supports program change to browse all 256 patches. Custom NSMBL CC handler for real-time sound shaping. Used by EEnoo, Pryns, and Aufde.
 
-### NSMBL_SmplCty — Sample Player (`AmyBoard/NSMBL_SmplCty/`)
-16-slice drum sample player. Reads WAV files with cue point markers from SD card. 4-voice polyphony, velocity-sensitive, chromatic mapping from C2.
+### NSMBL_SampleKits — Sample Player (`AmyBoard/NSMBL_SampleKits/`)
+16-slice drum sample player. Reads WAV files with cue point markers from SD card. 4-voice polyphony, velocity-sensitive, chromatic mapping from C2. Used by Kneel.
 
 ## Building
 
@@ -55,11 +55,9 @@ Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/g
 # Source ESP-IDF
 source ~/esp/esp-idf/export.sh
 
-# Copy band member config
-cp AmyBoard/configs/config_Pryns.h AmyBoard/NSMBL_EEnoo/main/config.h
-
-# Build and flash
-cd AmyBoard/NSMBL_EEnoo
+# Copy band member config, then build and flash
+cp AmyBoard/configs/config_Pryns.h AmyBoard/NSMBL_Synth/main/config.h
+cd AmyBoard/NSMBL_Synth
 idf.py build
 idf.py -p /dev/cu.usbmodem* flash monitor
 ```
