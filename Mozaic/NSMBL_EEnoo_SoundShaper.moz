@@ -1,0 +1,231 @@
+// NSMBL EEnoo Sound Shaper
+//
+// Real-time sound control for NSMBL_EEnoo AMY synth.
+// Knobs: Filter Cutoff, Resonance, Volume, Pan
+// Pads: Channel select, sustain, test notes
+//
+// AMY's built-in Juno handler responds to:
+//   CC 70 = Filter Frequency (exponential ~13Hz-6400Hz)
+//   CC 71 = Resonance (Q 0.5-16)
+//   CC 7  = Volume
+//   CC 10 = Pan
+//   CC 64 = Sustain pedal
+//   CC 1  = Mod wheel
+
+@Description
+Sound shaper for NSMBL_EEnoo AMY synth.
+Knob 0: Filter Cutoff (CC 70)
+Knob 1: Resonance (CC 71)
+Knob 2: Volume (CC 7)
+Knob 3: Mod Wheel (CC 1)
+Pads: Channel select, sustain, test notes.
+@End
+
+@OnLoad
+  Call @Init
+@End
+
+@Init
+  if Unassigned modinit
+    modinit = YES
+    currentChannel = 0
+    filterVal = 64
+    resoVal = 0
+    volVal = 100
+    modVal = 0
+    sustainOn = NO
+  endif
+  Call @InitUI
+@End
+
+@InitUI
+  ShowLayout 2
+  SetShortName {Shaper}
+  LabelPads {NSMBL EEnoo Sound Shaper}
+
+  Call @UpdateFilterKnob
+  Call @UpdateResoKnob
+  Call @UpdateVolKnob
+  Call @UpdateModKnob
+  Call @LabelAllPads
+@End
+
+// --- Knob Labels ---
+
+@UpdateFilterKnob
+  SetKnobValue 0, filterVal
+  LabelKnob 0, {Filter }, filterVal
+@End
+
+@UpdateResoKnob
+  SetKnobValue 1, resoVal
+  LabelKnob 1, {Reso }, resoVal
+@End
+
+@UpdateVolKnob
+  SetKnobValue 2, volVal
+  LabelKnob 2, {Vol }, volVal
+@End
+
+@UpdateModKnob
+  SetKnobValue 3, modVal
+  LabelKnob 3, {Mod }, modVal
+@End
+
+// --- Pad Layout ---
+
+@LabelAllPads
+  // Row 1: Channel selectors
+  ColorPad 0, 2
+  ColorPad 1, 0
+  ColorPad 2, 1
+  ColorPad 3, 3
+  LabelPad 0, {Juno Ch1}
+  LabelPad 1, {DX7 Ch2}
+  LabelPad 2, {Drums 10}
+  LabelPad 3, {All Ch}
+
+  // Row 1 right side: utilities
+  ColorPad 4, 3
+  ColorPad 5, 3
+  ColorPad 6, 3
+  ColorPad 7, 3
+  LabelPad 4, {Sustain}
+  LabelPad 5, {Reset CC}
+  LabelPad 6, { }
+  LabelPad 7, { }
+
+  // Row 2: Test notes
+  ColorPad 8, 0
+  ColorPad 9, 0
+  ColorPad 10, 0
+  ColorPad 11, 0
+  ColorPad 12, 0
+  ColorPad 13, 0
+  ColorPad 14, 0
+  ColorPad 15, 0
+  LabelPad 8, {C3}
+  LabelPad 9, {D3}
+  LabelPad 10, {E3}
+  LabelPad 11, {F3}
+  LabelPad 12, {G3}
+  LabelPad 13, {A3}
+  LabelPad 14, {B3}
+  LabelPad 15, {C4}
+
+  Call @HighlightChannel
+@End
+
+@HighlightChannel
+  LatchPad 0, NO
+  LatchPad 1, NO
+  LatchPad 2, NO
+  LatchPad 3, NO
+  if currentChannel = 0
+    LatchPad 0, YES
+  elseif currentChannel = 1
+    LatchPad 1, YES
+  elseif currentChannel = 9
+    LatchPad 2, YES
+  endif
+@End
+
+// --- Knob Handlers ---
+
+@OnKnobChange
+  knob = LastKnob
+  knobval = GetKnobValue knob
+
+  if knob = 0
+    // Filter Cutoff - CC 70
+    filterVal = knobval
+    SendMIDIOut 0xB0 + currentChannel, 70, filterVal
+    LabelKnob 0, {Filter }, filterVal
+  elseif knob = 1
+    // Resonance - CC 71
+    resoVal = knobval
+    SendMIDIOut 0xB0 + currentChannel, 71, resoVal
+    LabelKnob 1, {Reso }, resoVal
+  elseif knob = 2
+    // Volume - CC 7
+    volVal = knobval
+    SendMIDIOut 0xB0 + currentChannel, 7, volVal
+    LabelKnob 2, {Vol }, volVal
+  elseif knob = 3
+    // Mod Wheel - CC 1
+    modVal = knobval
+    SendMIDIOut 0xB0 + currentChannel, 1, modVal
+    LabelKnob 3, {Mod }, modVal
+  endif
+@End
+
+// --- Pad Handlers ---
+
+@OnPadDown
+  pad = LastPad
+
+  if pad = 0
+    // Juno - Channel 1 (0-indexed: 0)
+    currentChannel = 0
+    Call @HighlightChannel
+    LabelPads {Juno-6 (Ch 1)}
+  elseif pad = 1
+    // DX7 - Channel 2 (0-indexed: 1)
+    currentChannel = 1
+    Call @HighlightChannel
+    LabelPads {DX7 (Ch 2)}
+  elseif pad = 2
+    // Drums - Channel 10 (0-indexed: 9)
+    currentChannel = 9
+    Call @HighlightChannel
+    LabelPads {GM Drums (Ch 10)}
+  elseif pad = 3
+    // All channels - send to current
+    LabelPads {All Channels}
+  elseif pad = 4
+    // Sustain toggle
+    if sustainOn = NO
+      sustainOn = YES
+      LatchPad 4, YES
+      SendMIDIOut 0xB0 + currentChannel, 64, 127
+    else
+      sustainOn = NO
+      LatchPad 4, NO
+      SendMIDIOut 0xB0 + currentChannel, 64, 0
+    endif
+  elseif pad = 5
+    // Reset all CCs to defaults
+    filterVal = 64
+    resoVal = 0
+    volVal = 100
+    modVal = 0
+    SendMIDIOut 0xB0 + currentChannel, 70, filterVal
+    SendMIDIOut 0xB0 + currentChannel, 71, resoVal
+    SendMIDIOut 0xB0 + currentChannel, 7, volVal
+    SendMIDIOut 0xB0 + currentChannel, 1, modVal
+    Call @UpdateFilterKnob
+    Call @UpdateResoKnob
+    Call @UpdateVolKnob
+    Call @UpdateModKnob
+    FlashPad 5
+  elseif pad >= 8 and pad <= 15
+    // Test notes: C3 D3 E3 F3 G3 A3 B3 C4
+    testNotes = [48, 50, 52, 53, 55, 57, 59, 60]
+    noteIdx = pad - 8
+    SendMIDINoteOn currentChannel, testNotes[noteIdx], 100
+    FlashPad pad
+  endif
+@End
+
+@OnPadUp
+  pad = LastPad
+  if pad >= 8 and pad <= 15
+    testNotes = [48, 50, 52, 53, 55, 57, 59, 60]
+    noteIdx = pad - 8
+    SendMIDINoteOff currentChannel, testNotes[noteIdx], 0
+  endif
+@End
+
+@OnMidiInput
+  SendMIDIThru
+@End
