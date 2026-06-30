@@ -29,18 +29,20 @@
 - [x] Pitch Bend passthrough (working since EEnoo launch)
 - [x] Per-unit MIDI channel filtering (configurable via config.h, 0=all)
 - [x] Mozaic control surface — patch browsing, sound shaping, sustain, panic
+- [x] Band member configs created: EEnoo (pads), Pryns (lead), Aufde (bass), Kneel (drums)
+- [x] Named configs in `AmyBoard/configs/` — copy to config.h before flashing
 
 ### Next — MVP for Spatial Composition
-- [ ] Flash 3 AMYboards with EEnoo firmware
-- [ ] Verify 3-unit simultaneous BLE connection from iPhone
-- [ ] Assign each unit a dedicated channel/role (e.g. pads, bass, lead)
-- [ ] First spatial composition test with speakers
+- [ ] Flash 3 AMYboards: EEnoo (ch1 pads), Pryns (ch2 lead), Aufde (ch3 bass)
+- [ ] Verify 3-unit simultaneous BLE connection from iPhone/AUM
+- [ ] Connect each unit to a speaker in a different location
+- [ ] First spatial composition test
 
 ### Later
 - [ ] Kit switching via MIDI Program Change (SmplCty)
 - [ ] Modulino Buttons + Knob I2C drivers (when hardware arrives)
 - [ ] BLE-to-DIN MIDI bridge mode (forward BLE MIDI out GPIO 14/15)
-- [ ] Curated preset system per band role
 - [ ] Favorite voice slots stored in NVS flash
 - [ ] Reconnection handling — auto re-advertise after iOS disconnects
 - [ ] Per-unit Mozaic scripts (one controller per band member)
+- [ ] Dapht (Daft Punk) — sampler/granular unit, design TBD after first spatial jam
