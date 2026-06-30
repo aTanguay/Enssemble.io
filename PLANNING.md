@@ -14,22 +14,22 @@ The firmware is built with **ESP-IDF** and targets two hardware platforms:
 
 ## Current Status
 
-Rewriting firmware from Arduino to ESP-IDF. Prior Arduino-based prototype achieved two-unit band operation (EEnoo + Ryngo) — see git history for the Arduino-era codebase.
+ESP-IDF firmware working on AMYboard. Two band members operational.
 
-### Active Band Members
-| Name | Channel | Patch | Role | Boot Sound |
-|------|---------|-------|------|------------|
-| EEnoo | 1 | 0 | Keys/Piano | C major arpeggio |
-| Ryngo | 10 | 0 | Drums | Kick-hat-snare-hat-kick-kick-crash |
+### Working Band Members (ESP-IDF)
+| Name | Firmware | Platform | Role | Status |
+|------|----------|----------|------|--------|
+| NSMBL_SmplCty | `AmyBoard/NSMBL_SmplCty/` | AMYboard | 16-slice drum sample player (WAV/SD) | ✅ Verified |
+| NSMBL_EEnoo | `AmyBoard/NSMBL_EEnoo/` | AMYboard | AMY synth (Juno ch1, DX7 ch2, drums ch10) | ✅ Verified |
 
-### Planned Band Members (awaiting hardware)
+### Planned Band Members
 | Name | Channel | Patch | Role |
 |------|---------|-------|------|
 | Jami | 2 | 80 | Lead |
 | Kneel | 3 | 32 | Bass |
 | Mowss | 4 | 88 | Pads |
 | Bowee | 5 | 48 | Strings |
-| **SmplCty** | TBD | — | Sample Player (AMYboard) |
+| Ryngo | 10 | 0 | Drums |
 
 ---
 
@@ -156,9 +156,16 @@ XIAO (ESP32-C3, single-core — future):
 - LED = GPIO 10, active LOW
 
 ### Hardware — AMYboard ESP32-S3
-- AMY software synth engine
-- I2S audio output
-- More RAM and processing headroom than C3
+- AMY software synth engine (250 oscillators, dual-core rendering)
+- I2S audio output (32-bit stereo via onboard DAC)
+- 8MB octal PSRAM for samples and synth data
+- SD card (SPI: MOSI=11, MISO=13, CLK=12, CS=10)
+- I2S pins: MCLK=3, BCLK=8, WS=2, DOUT=6
+- I2C port: SDA=17, SCL=18 (for Modulino accessories)
+- MIDI out: GPIO 14 (Type A) / GPIO 15 (Type B)
+- MIDI in: GPIO 21
+- Line out: 3.5mm TRS stereo
+- S/PDIF in/out, CV in/out (2x each)
 
 ### iOS BLE Limits
 - iOS handles 13+ simultaneous BLE connections
@@ -169,6 +176,21 @@ XIAO (ESP32-C3, single-core — future):
 ---
 
 ## Session Log
+
+### 2026-06-30 — NSMBL_EEnoo (AMY Synth) Working
+- Integrated AMY synth engine as ESP-IDF component (250 oscillators)
+- AMY handles I2S, dual-core rendering, and voice management internally
+- Default synths: Juno-6 (ch1), DX7 (ch2), GM drums (ch10)
+- All-channel MIDI pass-through (no channel filter)
+- Reorganized project: `AmyBoard/NSMBL_SmplCty/` and `AmyBoard/NSMBL_EEnoo/`
+- Two band members working on same hardware platform
+
+### 2026-06-29 — NSMBL_SmplCty (Sample Player) Working
+- First ESP-IDF firmware from scratch — BLE MIDI + sample playback
+- WAV cue point parser for 16-slice drum kits
+- 4-voice polyphony with velocity scaling, I2S output
+- SD card with FAT32 long filename support
+- End-to-end verified: iPhone → AUM → BLE → 808 drums
 
 ### 2026-06-29 — ESP-IDF Migration Started
 - Decision: move from Arduino to ESP-IDF for both XIAO and AMYboard platforms
