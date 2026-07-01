@@ -3,12 +3,16 @@
 
 #include "driver/gpio.h"
 #include "esp_timer.h"
+#include "esp_log.h"
+
+static const char *TAG = "buttons";
 
 typedef struct {
     uint8_t  pin;
     bool     pressed;
     uint32_t press_time;
     bool     long_fired;
+    int      last_raw;      // last raw GPIO level, for edge logging
 } button_state_t;
 
 static button_state_t s_buttons[4];
@@ -40,15 +44,36 @@ void buttons_init(button_cb_t on_short, button_cb_t on_long)
             .intr_type    = GPIO_INTR_DISABLE,
         };
         gpio_config(&cfg);
+        s_buttons[i].last_raw = gpio_get_level(pins[i]);
     }
+
+    ESP_LOGI(TAG, "Buttons init: pins %d/%d/%d/%d, resting levels %d/%d/%d/%d (1=released)",
+             pins[0], pins[1], pins[2], pins[3],
+             s_buttons[0].last_raw, s_buttons[1].last_raw,
+             s_buttons[2].last_raw, s_buttons[3].last_raw);
 }
 
 void buttons_poll(void)
 {
     uint32_t t = now_ms();
 
+    // Heartbeat: confirm the poll loop runs even while BLE is busy
+    static uint32_t last_hb = 0;
+    if (t - last_hb >= 3000) {
+        last_hb = t;
+        ESP_LOGI(TAG, "poll alive; raw levels %d/%d/%d/%d",
+                 gpio_get_level(s_buttons[0].pin), gpio_get_level(s_buttons[1].pin),
+                 gpio_get_level(s_buttons[2].pin), gpio_get_level(s_buttons[3].pin));
+    }
+
     for (int i = 0; i < 4; i++) {
-        bool down = (gpio_get_level(s_buttons[i].pin) == 0);
+        int raw = gpio_get_level(s_buttons[i].pin);
+        if (raw != s_buttons[i].last_raw) {
+            s_buttons[i].last_raw = raw;
+            ESP_LOGI(TAG, "BTN %d (pin %d) -> %d", i, s_buttons[i].pin, raw);
+        }
+
+        bool down = (raw == 0);
 
         if (down && !s_buttons[i].pressed) {
             s_buttons[i].pressed    = true;
