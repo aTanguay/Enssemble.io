@@ -32,11 +32,24 @@
 - [x] Band member configs created: EEnoo (pads), Pryns (lead), Aufde (bass), Kneel (drums)
 - [x] Named configs in `AmyBoard/configs/` — copy to config.h before flashing
 
+## Phase 2b — XIAO Platform (In Progress)
+
+### Done
+- [x] XIAO ESP-IDF firmware (`SeeedXiaoMIDI/NSMBL_Synth/`) — BLE MIDI + SAM2695 UART
+- [x] SAM2695 MIDI reference extracted from chip spec (`Docs/SAM2695_MIDI_Reference.md`)
+- [x] Full CC/NRPN passthrough — firmware forwards all CCs to SAM2695, NRPNs work natively
+- [x] Mozaic XIAO controller (`Mozaic/NSMBL_XIAO_Controller.moz`) — Layout 0 (Mix)
+  - XY pad: filter cutoff + resonance via NRPN
+  - 10 knobs: volume, expression, reverb/chorus send+type, attack, release, vibrato rate/depth
+  - 8 pads: patch/bank navigation, sustain, reset, PANIC
+- [x] BLE MIDI parser rewrite — proper running status support, debug logging
+
 ### Next — MVP for Spatial Composition
 - [ ] Flash 3 AMYboards: EEnoo (ch1 pads), Pryns (ch2 lead), Aufde (ch3 bass)
 - [ ] Verify 3-unit simultaneous BLE connection from iPhone/AUM
 - [ ] Connect each unit to a speaker in a different location
 - [ ] First spatial composition test
+- [ ] Verify XIAO Mozaic controller end-to-end (CCs, NRPNs, program changes)
 
 ### Later
 - [ ] Kit switching via MIDI Program Change (SmplCty)

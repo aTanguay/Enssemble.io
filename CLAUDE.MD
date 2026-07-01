@@ -3,6 +3,20 @@
 3. Don't touch unrelated code. If a file or function is not directly part of the current task, do not modify it, even if you think it could be improved.
 4. Flag uncertainty explicitly. If you are not confident about an approach or technical detail, say so before proceeding. Confidence without certainty causes more damage than admitting a gap.
 
+## ESP-IDF Toolchain
+
+ESP-IDF is installed at `~/esp/esp-idf/`. Source it before any build/flash commands:
+
+```bash
+bash -c '. ~/esp/esp-idf/export.sh > /dev/null 2>&1; cd <project-dir> && idf.py build'
+```
+
+The XIAO ESP32-C3 typically appears at `/dev/cu.usbmodem101`. Flash with:
+
+```bash
+bash -c '. ~/esp/esp-idf/export.sh > /dev/null 2>&1; cd <project-dir> && idf.py -p /dev/cu.usbmodem101 flash'
+```
+
 ## AI Assistant Session Workflow
 
 **MANDATORY FIRST STEPS**:

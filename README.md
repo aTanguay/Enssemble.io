@@ -9,7 +9,8 @@ Custom ESP-IDF firmware for wireless BLE MIDI synthesizer units, designed for **
 - Receives Note On/Off, Program Change, Pitch Bend, and CCs
 - Per-unit MIDI channel filtering — each band member responds only to its assigned channel
 - Real-time sound shaping via standard MIDI CCs (filter, reverb, chorus, volume, pan)
-- Two firmware variants: **AMY synth** (256 patches) and **sample player** (WAV kits from SD)
+- Two platforms: **AMYboard** (ESP32-S3 + AMY software synth) and **XIAO** (ESP32-C3 + SAM2695 hardware GM wavetable)
+- AMYboard firmware variants: **AMY synth** (256 patches) and **sample player** (WAV kits from SD)
 - iOS control surface via **Mozaic** scripts
 
 ## The Concept
@@ -39,6 +40,12 @@ Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing
 - 8MB octal PSRAM, SD card, I2S line out (3.5mm TRS stereo)
 - I2C port for accessories, MIDI in/out (TRS), CV in/out, S/PDIF
 
+### Seeed XIAO ESP32-C3 + SAM2695
+- XIAO ESP32-C3 — $5, tiny form factor, single-core RISC-V
+- Dream SAM2695 — hardware GM wavetable synth, 128 GM patches + drum kits, 64-voice polyphony
+- UART MIDI at 31250 baud, full CC/NRPN passthrough (filter, envelope, vibrato, reverb/chorus types)
+- 3.5mm stereo line out + onboard Class-D amplifier
+
 ## Firmware Variants
 
 ### NSMBL_Synth — AMY Synth (`AmyBoard/NSMBL_Synth/`)
@@ -46,6 +53,9 @@ Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX
 
 ### NSMBL_SampleKits — Sample Player (`AmyBoard/NSMBL_SampleKits/`)
 16-slice drum sample player. Reads WAV files with cue point markers from SD card. 4-voice polyphony, velocity-sensitive, chromatic mapping from C2. Used by Kneel.
+
+### NSMBL_Synth — SAM2695 (`SeeedXiaoMIDI/NSMBL_Synth/`)
+Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthrough, NRPN support for filter cutoff/resonance, envelope, and vibrato. BLE MIDI parser with running status support. See `Docs/SAM2695_MIDI_Reference.md` for full CC/NRPN map.
 
 ## Building
 
@@ -77,7 +87,8 @@ iOS scripts in `Mozaic/` for the [Mozaic](https://ruismaker.com) MIDI scripting 
 
 | Script | Purpose |
 |--------|---------|
-| **NSMBL_EEnoo_Controller.moz** | Unified controller: patch browsing, filter/reso/reverb/chorus knobs, vol/pan mode, sustain, MIDI panic |
+| **NSMBL_EEnoo_Controller.moz** | AMYboard: patch browsing, filter/reso/reverb/chorus knobs, vol/pan mode, sustain, MIDI panic |
+| **NSMBL_XIAO_Controller.moz** | XIAO/SAM2695: Mix layout — XY filter pad, NRPNs, named reverb/chorus types, envelope, vibrato |
 | NSMBL_EEnoo_PatchSelect.moz | Simple patch bank selector |
 | NSMBL_EEnoo_SoundShaper.moz | CC knobs only |
 

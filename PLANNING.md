@@ -14,20 +14,22 @@ The firmware is built with **ESP-IDF** and targets two hardware platforms:
 
 ## Current Status
 
-ESP-IDF firmware working on AMYboard. Two firmware variants ready. Three AMYboards available for spatial deployment. Mozaic iOS control surface replaces planned TouchOSC phase. Approaching MVP for first spatial composition.
+ESP-IDF firmware working on both AMYboard and XIAO platforms. Three AMYboards available for spatial deployment. XIAO+SAM2695 firmware verified with hardware GM wavetable synth. Mozaic iOS control surface replaces planned TouchOSC phase. Approaching MVP for first spatial composition.
 
 ### Firmware Variants
-| Firmware | Directory | Purpose | Status |
-|----------|-----------|---------|--------|
-| NSMBL_Synth | `AmyBoard/NSMBL_Synth/` | AMY synth engine (Juno, DX7, drums) | ✅ Verified |
-| NSMBL_SampleKits | `AmyBoard/NSMBL_SampleKits/` | 16-slice WAV sample player (SD card) | ✅ Verified |
+| Firmware | Directory | Platform | Purpose | Status |
+|----------|-----------|----------|---------|--------|
+| NSMBL_Synth | `AmyBoard/NSMBL_Synth/` | AMYboard (ESP32-S3) | AMY synth engine (Juno, DX7, drums) | ✅ Verified |
+| NSMBL_SampleKits | `AmyBoard/NSMBL_SampleKits/` | AMYboard (ESP32-S3) | 16-slice WAV sample player (SD card) | ✅ Verified |
+| NSMBL_Synth | `SeeedXiaoMIDI/NSMBL_Synth/` | XIAO (ESP32-C3) | SAM2695 hardware GM wavetable synth | ✅ Verified |
 
 Band member identity is set via `config.h` — copy from `AmyBoard/configs/` before building.
 
 ### iOS Control Surface (Mozaic)
 | Script | Purpose | Status |
 |--------|---------|--------|
-| `NSMBL_EEnoo_Controller.moz` | Unified patch browser + sound shaper + panic | ✅ Working |
+| `NSMBL_EEnoo_Controller.moz` | AMYboard: patch browser + sound shaper + panic | ✅ Working |
+| `NSMBL_XIAO_Controller.moz` | XIAO: Mix layout with XY filter, NRPNs, named FX types | ✅ Working |
 | `NSMBL_EEnoo_PatchSelect.moz` | Simple patch bank selector (superseded) | ✅ Working |
 | `NSMBL_EEnoo_SoundShaper.moz` | CC knobs only (superseded) | ✅ Working |
 
@@ -87,9 +89,10 @@ AMYboard (ESP32-S3, dual-core):
     +-- Per-unit config (device name, channel, patch)
     +-- Boot sound on startup
 
-XIAO (ESP32-C3, single-core — future):
-  +-- BLE MIDI stack (NimBLE)
-  +-- SAM2695 via UART @ 31250 baud
+XIAO (ESP32-C3, single-core):
+  +-- BLE MIDI stack (NimBLE) with running status support
+  +-- SAM2695 via UART @ 31250 baud (128 GM + drum kits)
+  +-- Full CC/NRPN passthrough (filter, envelope, vibrato, FX types)
   +-- 3.5mm stereo + onboard Class-D amp
 ```
 
@@ -125,12 +128,15 @@ XIAO (ESP32-C3, single-core — future):
 - [ ] Button input handler
 - [ ] Multi-unit simultaneous operation verified
 
-### Phase 2b — XIAO Platform Port
-*Bring the proven BLE MIDI layer to the XIAO ESP32-C3 + SAM2695*
+### Phase 2b — XIAO Platform ✅
+*BLE MIDI on XIAO ESP32-C3 + SAM2695 hardware GM synth*
 
-- [ ] SAM2695 UART driver component
-- [ ] Adapt single-core architecture (C3 has one core)
-- [ ] Validate same BLE MIDI layer works on both platforms
+- [x] SAM2695 UART driver component (31250 baud)
+- [x] Single-core architecture adapted for ESP32-C3 (RISC-V)
+- [x] BLE MIDI parser with running status support
+- [x] Full CC/NRPN passthrough to SAM2695
+- [x] SAM2695 MIDI reference documented (`Docs/SAM2695_MIDI_Reference.md`)
+- [x] Mozaic XIAO controller (Layout 0 Mix — XY filter, NRPNs, named FX types)
 
 ### Phase 3 — ~~TouchOSC~~ Mozaic Control Surface ✅
 *Replaced TouchOSC plan with Mozaic iOS scripts — simpler, more flexible, already working.*
@@ -202,6 +208,20 @@ XIAO (ESP32-C3, single-core — future):
 ---
 
 ## Session Log
+
+### 2026-07-01 — XIAO Platform: SAM2695 Reference, Mozaic Controller, BLE Parser Fix
+- Extracted full SAM2695 MIDI reference from chip spec PDF → `Docs/SAM2695_MIDI_Reference.md`
+- Documented all CCs, reverb/chorus types, NRPNs (filter, envelope, vibrato), RPNs, SysEx deep params, 4-band EQ
+- Created Mozaic XIAO controller (`NSMBL_XIAO_Controller.moz`) — Layout 0 (Mix)
+  - XY pad: filter cutoff + resonance via NRPN
+  - 10 knobs: volume, expression, reverb/chorus send+type (with named labels), attack, release, vibrato rate/depth
+  - 8 pads: patch/bank nav, sustain, CC reset, PANIC
+- Rewrote BLE MIDI parser (`ble_midi.c`) — proper running status support
+  - Old parser had duplicate timestamp-skip blocks that broke when iOS omitted status bytes
+  - Timestamps were misinterpreted as status bytes, corrupting CCs into phantom Note Offs
+  - New parser tracks running_status, uses data_bytes_for_status() lookup, handles SysRT/SysEx
+  - Added raw hex dump at DEBUG level for troubleshooting
+- Confirmed XIAO firmware forwards all CCs to SAM2695 — no firmware changes needed for new CC types
 
 ### 2026-06-30 — NSMBL_EEnoo + Mozaic Control Surface
 - Integrated AMY synth engine as ESP-IDF component (250 oscillators)

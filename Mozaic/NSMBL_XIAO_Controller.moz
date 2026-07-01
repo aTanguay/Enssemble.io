@@ -1,0 +1,390 @@
+// NSMBL XIAO Controller
+//
+// Mix layout controller for NSMBL XIAO + SAM2695.
+// Layout 0: 10 knobs, 8 pads, XY pad.
+//
+// XY Pad: Filter Cutoff (X) + Resonance (Y) via NRPN
+//
+// Knobs:
+//   0: Volume (CC 7)        5: Chorus Type (CC 81)
+//   1: Expression (CC 11)   6: Attack (NRPN)
+//   2: Reverb Send (CC 91)  7: Release (NRPN)
+//   3: Chorus Send (CC 93)  8: Vibrato Rate (NRPN)
+//   4: Reverb Type (CC 80)  9: Vibrato Depth (NRPN)
+//
+// Pads:
+//   0: Patch -    4: Sustain
+//   1: Patch +    5: Reset CCs
+//   2: Bank -     6: (reserved)
+//   3: Bank +     7: PANIC!
+
+@Description
+NSMBL XIAO + SAM2695 Controller.
+XY Pad = Filter Cutoff / Resonance.
+Knobs = Volume, FX sends, types, envelope.
+Pads = Patch/Bank nav, sustain, panic.
+@End
+
+@OnLoad
+  Call @Init
+@End
+
+@Init
+  if Unassigned modinit
+    modinit = YES
+    ch = 0
+    curPatch = 0
+    curBank = 0
+    sustainOn = NO
+    volVal = 100
+    exprVal = 127
+    revSend = 30
+    chrSend = 0
+    revType = 4
+    chrType = 2
+    attackVal = 64
+    releaseVal = 64
+    vibRateVal = 64
+    vibDepthVal = 64
+    filterVal = 64
+    resoVal = 64
+  endif
+  Call @InitUI
+@End
+
+@InitUI
+  ShowLayout 0
+  SetShortName {XIAO}
+
+  // Knob labels
+  LabelKnobs {SAM2695 Controls}
+  LabelKnob 0, {Vol }, volVal
+  LabelKnob 1, {Expr }, exprVal
+  LabelKnob 2, {RevSnd }, revSend
+  LabelKnob 3, {ChrSnd }, chrSend
+  LabelKnob 4, {RevTyp }, revType
+  LabelKnob 5, {ChrTyp }, chrType
+  LabelKnob 6, {Attack }, attackVal
+  LabelKnob 7, {Releas }, releaseVal
+  LabelKnob 8, {VibRat }, vibRateVal
+  LabelKnob 9, {VibDep }, vibDepthVal
+
+  // Knob initial values
+  SetKnobValue 0, volVal
+  SetKnobValue 1, exprVal
+  SetKnobValue 2, revSend
+  SetKnobValue 3, chrSend
+  SetKnobValue 4, (revType * 18)
+  SetKnobValue 5, (chrType * 18)
+  SetKnobValue 6, attackVal
+  SetKnobValue 7, releaseVal
+  SetKnobValue 8, vibRateVal
+  SetKnobValue 9, vibDepthVal
+
+  // XY pad
+  LabelXY {Filter / Reso}
+  SetXYValues filterVal, resoVal
+
+  // Pad setup
+  LabelPads {Patch }, curPatch, { Bank }, curBank
+  Call @SetupPads
+@End
+
+@SetupPads
+  LabelPad 0, {Patch -}
+  LabelPad 1, {Patch +}
+  LabelPad 2, {Bank -}
+  LabelPad 3, {Bank +}
+  LabelPad 4, {Sustain}
+  LabelPad 5, {Reset}
+  LabelPad 6, { }
+  LabelPad 7, {PANIC!}
+
+  ColorPad 0, 4
+  ColorPad 1, 4
+  ColorPad 2, 5
+  ColorPad 3, 5
+  ColorPad 4, 3
+  ColorPad 5, 2
+  ColorPad 6, 0
+  ColorPad 7, 1
+
+  LatchPad 4, sustainOn
+@End
+
+// --- Reverb type names ---
+@ShowRevType
+  if revType = 0
+    LabelKnob 4, {Room 1}
+  elseif revType = 1
+    LabelKnob 4, {Room 2}
+  elseif revType = 2
+    LabelKnob 4, {Room 3}
+  elseif revType = 3
+    LabelKnob 4, {Hall 1}
+  elseif revType = 4
+    LabelKnob 4, {Hall 2}
+  elseif revType = 5
+    LabelKnob 4, {Plate}
+  elseif revType = 6
+    LabelKnob 4, {Delay}
+  elseif revType = 7
+    LabelKnob 4, {PanDly}
+  endif
+@End
+
+// --- Chorus type names ---
+@ShowChrType
+  if chrType = 0
+    LabelKnob 5, {Chor 1}
+  elseif chrType = 1
+    LabelKnob 5, {Chor 2}
+  elseif chrType = 2
+    LabelKnob 5, {Chor 3}
+  elseif chrType = 3
+    LabelKnob 5, {Chor 4}
+  elseif chrType = 4
+    LabelKnob 5, {FB Chr}
+  elseif chrType = 5
+    LabelKnob 5, {Flangr}
+  elseif chrType = 6
+    LabelKnob 5, {ShrtDl}
+  elseif chrType = 7
+    LabelKnob 5, {FB Dly}
+  endif
+@End
+
+// --- Send NRPN helper ---
+// Uses global nrpnMSB, nrpnLSB, nrpnVal
+@SendNRPN
+  SendMIDIOut 0xB0 + ch, 99, nrpnMSB
+  SendMIDIOut 0xB0 + ch, 98, nrpnLSB
+  SendMIDIOut 0xB0 + ch, 6, nrpnVal
+@End
+
+// --- Knob Handler ---
+
+@OnKnobChange
+  knob = LastKnob
+  v = GetKnobValue knob
+
+  if knob = 0
+    volVal = v
+    SendMIDIOut 0xB0 + ch, 7, v
+    LabelKnob 0, {Vol }, v
+  elseif knob = 1
+    exprVal = v
+    SendMIDIOut 0xB0 + ch, 11, v
+    LabelKnob 1, {Expr }, v
+  elseif knob = 2
+    revSend = v
+    SendMIDIOut 0xB0 + ch, 91, v
+    LabelKnob 2, {RevSnd }, v
+  elseif knob = 3
+    chrSend = v
+    SendMIDIOut 0xB0 + ch, 93, v
+    LabelKnob 3, {ChrSnd }, v
+  elseif knob = 4
+    // Reverb type: scale 0-127 to 0-7
+    revType = Div v, 18
+    if revType > 7
+      revType = 7
+    endif
+    SendMIDIOut 0xB0 + ch, 80, revType
+    Call @ShowRevType
+  elseif knob = 5
+    // Chorus type: scale 0-127 to 0-7
+    chrType = Div v, 18
+    if chrType > 7
+      chrType = 7
+    endif
+    SendMIDIOut 0xB0 + ch, 81, chrType
+    Call @ShowChrType
+  elseif knob = 6
+    attackVal = v
+    nrpnMSB = 1
+    nrpnLSB = 99
+    nrpnVal = v
+    Call @SendNRPN
+    LabelKnob 6, {Attack }, v
+  elseif knob = 7
+    releaseVal = v
+    nrpnMSB = 1
+    nrpnLSB = 102
+    nrpnVal = v
+    Call @SendNRPN
+    LabelKnob 7, {Releas }, v
+  elseif knob = 8
+    vibRateVal = v
+    nrpnMSB = 1
+    nrpnLSB = 8
+    nrpnVal = v
+    Call @SendNRPN
+    LabelKnob 8, {VibRat }, v
+  elseif knob = 9
+    vibDepthVal = v
+    nrpnMSB = 1
+    nrpnLSB = 9
+    nrpnVal = v
+    Call @SendNRPN
+    LabelKnob 9, {VibDep }, v
+  endif
+@End
+
+// --- XY Pad: Filter Cutoff (X) + Resonance (Y) ---
+
+@OnXYChange
+  filterVal = GetXValue
+  resoVal = GetYValue
+
+  // Filter cutoff NRPN 0120h (MSB=1, LSB=32)
+  nrpnMSB = 1
+  nrpnLSB = 32
+  nrpnVal = filterVal
+  Call @SendNRPN
+
+  // Resonance NRPN 0121h (MSB=1, LSB=33)
+  nrpnMSB = 1
+  nrpnLSB = 33
+  nrpnVal = resoVal
+  Call @SendNRPN
+
+  LabelXY {Filt }, filterVal, { Res }, resoVal
+@End
+
+// --- Pad Handler ---
+
+@OnPadDown
+  pad = LastPad
+
+  if pad = 0
+    // Patch -
+    if curPatch > 0
+      Dec curPatch
+    else
+      curPatch = 127
+    endif
+    SendMIDIOut 0xB0 + ch, 0, curBank
+    SendMIDIOut 0xC0 + ch, curPatch
+    LabelPads {Patch }, curPatch, { Bank }, curBank
+    FlashPad 0
+    Log {Patch: }, curPatch, { Bank: }, curBank
+
+  elseif pad = 1
+    // Patch +
+    if curPatch < 127
+      Inc curPatch
+    else
+      curPatch = 0
+    endif
+    SendMIDIOut 0xB0 + ch, 0, curBank
+    SendMIDIOut 0xC0 + ch, curPatch
+    LabelPads {Patch }, curPatch, { Bank }, curBank
+    FlashPad 1
+    Log {Patch: }, curPatch, { Bank: }, curBank
+
+  elseif pad = 2
+    // Bank -
+    if curBank > 0
+      Dec curBank
+    else
+      curBank = 127
+    endif
+    SendMIDIOut 0xB0 + ch, 0, curBank
+    SendMIDIOut 0xC0 + ch, curPatch
+    LabelPads {Patch }, curPatch, { Bank }, curBank
+    FlashPad 2
+    Log {Bank: }, curBank
+
+  elseif pad = 3
+    // Bank +
+    if curBank < 127
+      Inc curBank
+    else
+      curBank = 0
+    endif
+    SendMIDIOut 0xB0 + ch, 0, curBank
+    SendMIDIOut 0xC0 + ch, curPatch
+    LabelPads {Patch }, curPatch, { Bank }, curBank
+    FlashPad 3
+    Log {Bank: }, curBank
+
+  elseif pad = 4
+    // Sustain toggle
+    if sustainOn = NO
+      sustainOn = YES
+      LatchPad 4, YES
+      SendMIDIOut 0xB0 + ch, 64, 127
+    else
+      sustainOn = NO
+      LatchPad 4, NO
+      SendMIDIOut 0xB0 + ch, 64, 0
+    endif
+
+  elseif pad = 5
+    // Reset all controls to defaults
+    volVal = 100
+    exprVal = 127
+    revSend = 30
+    chrSend = 0
+    revType = 4
+    chrType = 2
+    attackVal = 64
+    releaseVal = 64
+    vibRateVal = 64
+    vibDepthVal = 64
+    filterVal = 64
+    resoVal = 64
+
+    // Send default CCs
+    SendMIDIOut 0xB0 + ch, 7, volVal
+    SendMIDIOut 0xB0 + ch, 11, exprVal
+    SendMIDIOut 0xB0 + ch, 91, revSend
+    SendMIDIOut 0xB0 + ch, 93, chrSend
+    SendMIDIOut 0xB0 + ch, 80, revType
+    SendMIDIOut 0xB0 + ch, 81, chrType
+
+    // Reset NRPNs to neutral (64)
+    nrpnMSB = 1
+    nrpnLSB = 32
+    nrpnVal = 64
+    Call @SendNRPN
+    nrpnLSB = 33
+    Call @SendNRPN
+    nrpnLSB = 99
+    Call @SendNRPN
+    nrpnLSB = 102
+    Call @SendNRPN
+    nrpnLSB = 8
+    Call @SendNRPN
+    nrpnLSB = 9
+    Call @SendNRPN
+
+    // Reset sustain
+    sustainOn = NO
+    SendMIDIOut 0xB0 + ch, 64, 0
+    LatchPad 4, NO
+
+    Call @InitUI
+    FlashPad 5
+    Log {All controls reset}
+
+  elseif pad = 7
+    // PANIC — all notes off on all channels
+    for panic_ch = 0 to 15
+      SendMIDIOut 0xB0 + panic_ch, 120, 0
+      SendMIDIOut 0xB0 + panic_ch, 123, 0
+      SendMIDIOut 0xB0 + panic_ch, 64, 0
+    endfor
+    sustainOn = NO
+    LatchPad 4, NO
+    FlashPad 7
+    Log {PANIC! All notes off}
+  endif
+@End
+
+// --- Pass through all other MIDI ---
+
+@OnMidiInput
+  SendMIDIThru
+@End
