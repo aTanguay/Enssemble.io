@@ -49,7 +49,7 @@ static void process_midi_event(const midi_event_t *event)
             sam2695_control_change(ch, 0, current_bank);
         } else {
             sam2695_control_change(ch, event->data1, event->data2);
-            if (event->data1 == 7 && ch == (MIDI_CHANNEL - 1)) {
+            if (event->data1 == 7 && (MIDI_CHANNEL == 0 || ch == (MIDI_CHANNEL - 1))) {
                 current_volume = event->data2;
             }
         }

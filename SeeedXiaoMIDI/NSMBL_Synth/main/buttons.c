@@ -3,16 +3,14 @@
 
 #include "driver/gpio.h"
 #include "esp_timer.h"
-#include "esp_log.h"
-
-static const char *TAG = "buttons";
 
 typedef struct {
     uint8_t  pin;
-    bool     pressed;
+    bool     pressed;        // debounced state (true = held down)
     uint32_t press_time;
     bool     long_fired;
-    int      last_raw;      // last raw GPIO level, for edge logging
+    int      last_raw;       // last raw level read, for debounce
+    uint32_t last_change;    // when last_raw last changed
 } button_state_t;
 
 static button_state_t s_buttons[4];
@@ -36,6 +34,11 @@ void buttons_init(button_cb_t on_short, button_cb_t on_long)
         s_buttons[i].pressed = false;
         s_buttons[i].long_fired = false;
 
+        // Match Arduino's pinMode(): reset the pad to a clean GPIO state first,
+        // detaching any peripheral/matrix routing left on it, before configuring
+        // it as a pulled-up input.
+        gpio_reset_pin(pins[i]);
+
         gpio_config_t cfg = {
             .pin_bit_mask = (1ULL << pins[i]),
             .mode         = GPIO_MODE_INPUT,
@@ -44,36 +47,31 @@ void buttons_init(button_cb_t on_short, button_cb_t on_long)
             .intr_type    = GPIO_INTR_DISABLE,
         };
         gpio_config(&cfg);
-        s_buttons[i].last_raw = gpio_get_level(pins[i]);
-    }
 
-    ESP_LOGI(TAG, "Buttons init: pins %d/%d/%d/%d, resting levels %d/%d/%d/%d (1=released)",
-             pins[0], pins[1], pins[2], pins[3],
-             s_buttons[0].last_raw, s_buttons[1].last_raw,
-             s_buttons[2].last_raw, s_buttons[3].last_raw);
+        s_buttons[i].last_raw    = gpio_get_level(pins[i]);
+        s_buttons[i].last_change = 0;
+    }
 }
 
 void buttons_poll(void)
 {
     uint32_t t = now_ms();
 
-    // Heartbeat: confirm the poll loop runs even while BLE is busy
-    static uint32_t last_hb = 0;
-    if (t - last_hb >= 3000) {
-        last_hb = t;
-        ESP_LOGI(TAG, "poll alive; raw levels %d/%d/%d/%d",
-                 gpio_get_level(s_buttons[0].pin), gpio_get_level(s_buttons[1].pin),
-                 gpio_get_level(s_buttons[2].pin), gpio_get_level(s_buttons[3].pin));
-    }
-
     for (int i = 0; i < 4; i++) {
         int raw = gpio_get_level(s_buttons[i].pin);
+
+        // Debounce: restart the settle timer whenever the raw level moves, and
+        // only act on a level that has been stable for DEBOUNCE_MS.
         if (raw != s_buttons[i].last_raw) {
-            s_buttons[i].last_raw = raw;
-            ESP_LOGI(TAG, "BTN %d (pin %d) -> %d", i, s_buttons[i].pin, raw);
+            s_buttons[i].last_raw    = raw;
+            s_buttons[i].last_change = t;
+            continue;
+        }
+        if (t - s_buttons[i].last_change < DEBOUNCE_MS) {
+            continue;
         }
 
-        bool down = (raw == 0);
+        bool down = (raw == 0);  // active LOW
 
         if (down && !s_buttons[i].pressed) {
             s_buttons[i].pressed    = true;
