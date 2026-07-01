@@ -1,7 +1,33 @@
-# Enssemble — BLE MIDI Spatial Synth Firmware
-### "The Band"
+# Enssemble — The Digital Scrap Band
 
-Custom ESP-IDF firmware for wireless BLE MIDI synthesizer units, designed for **spatial audio deployment** — multiple synth units placed around a room, each a different instrument, all driven wirelessly from an iPhone.
+
+**The Scrap Band**
+
+The goal of Enssemble is to make experimenting with what I like to call a 'scrap band' a lot easier and cheaper. Placing musical members/nodes around your room gives you a completely different (fun) experience than traditional than two channel stereo. I really strive to make them 100% wireless, so one can experiment at will. Running cables breaks the flow, and the metaphor.
+
+To do a band, we make a collection of sound making devices, sequenced through one BLE MIDI source. I personally use AUMv3 on iOS for this. This is your brain. Just about any kind of sequencing you'd want is possible this way.
+
+**The Member Nodes**
+
+Battery>Node>Amp>Speaker
+
+To get going, you need nodes, or 'members' to your band. The cheapest way I have found is a Seeed Studio Xiao MIDI synthesizer, a USB power brick, and a thrifted speaker...that's it. This could be done for $30-$50, depending on what you have available...most people have at least a few USB bricks around. So, a whole 'band' could cost you as little as $100, depending on what you have available. And frankly batteries are optional, but I go for no wires here.
+
+Now that's the cheapest option, but there's nothing stopping you from using the speaker on the Xiao, or hooking up a stadium PA. That's your business.
+
+**Enssemble Firmwares**
+
+Right now, there are two paths for Enssemble firmware. The aforementioned Xiao, and then the 'AmyBoard'. This is a very cool, very cheap, very capable board that gives you some things that the Xiao doesn't have. The downside being the lack of built in amplifier. The Xiao has a surprisingly capable little Class D amp inside. So when powered, it's ready to go. 
+
+On the other hand, the Amyboard supports more modern synthesis, Sample playback, and midi in and out. As well as CV, if you wanna get nuts. But, you'll need powered speakers of some type. Which isn't the end of the world, but makes things more complicated.
+
+**Node control and sonic shaping**
+
+For this, I've been using Mozaic on iOS. The firmware support program change and passing CCs to whatever tweakable parameters the synths have. And keep in mind that the Xiao uses some older sound types, but that's half the fun...trying to make cool stuff out 
+
+
+
+
 
 ## What It Does
 
@@ -9,13 +35,13 @@ Custom ESP-IDF firmware for wireless BLE MIDI synthesizer units, designed for **
 - Receives Note On/Off, Program Change, Pitch Bend, and CCs
 - Per-unit MIDI channel filtering — each band member responds only to its assigned channel
 - Real-time sound shaping via standard MIDI CCs (filter, reverb, chorus, volume, pan)
-- Two platforms: **AMYboard** (ESP32-S3 + AMY software synth) and **XIAO** (ESP32-C3 + SAM2695 hardware GM wavetable)
+- Two platforms: **AMYboard** (ESP32-S3 + AMY software synth) and **XIAO MIDI Synthesizer** (ESP32-C3 + SAM2695 hardware GM wavetable)
 - AMYboard firmware variants: **AMY synth** (256 patches) and **sample player** (WAV kits from SD)
 - iOS control surface via **Mozaic** scripts
 
 ## The Concept
 
-Multiple units deployed around a room. Each one is a band member — a different instrument, a different voice, placed wherever sounds right spatially. The iPhone is the bandleader. Sound comes from physically located objects rather than stereo speakers.
+Multiple units deployed around a room. Each one is a band member — a different instrument, a different voice, placed wherever sounds right spatially. The iOS device is the bandleader. Sound comes from physically located objects rather than stereo speakers.
 
 Units are named after famous musicians. One name. No last name needed.
 
@@ -23,8 +49,8 @@ Units are named after famous musicians. One name. No last name needed.
 
 | Name | Inspiration | Ch | Role | Default Patch | Firmware |
 |------|-------------|-----|------|---------------|----------|
-| **EEnoo** | Brian Eno | 1 | Pads/Ambient | Juno Synth Pad | AMY synth |
-| **Pryns** | Prince | 2 | Lead | Juno Lead I | AMY synth |
+| **Eenoo** | Brian Eno | 1 | Pads/Ambient | Juno Synth Pad | AMY synth |
+| **Prynz** | Prince | 2 | Lead | Juno Lead I | AMY synth |
 | **Aufde** | Melissa Auf der Maur | 3 | Bass | Juno Synth Bass I | AMY synth |
 | **Kneel** | Neal Peart | 10 | Drums | 808 kit (SD card) | Sample player |
 | **Dapht** | Daft Punk | TBD | Samples | TBD | Future |
@@ -40,8 +66,8 @@ Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing
 - 8MB octal PSRAM, SD card, I2S line out (3.5mm TRS stereo)
 - I2C port for accessories, MIDI in/out (TRS), CV in/out, S/PDIF
 
-### Seeed XIAO ESP32-C3 + SAM2695
-- XIAO ESP32-C3 — $5, tiny form factor, single-core RISC-V
+### Seeed Studio XIAO MIDI Synthesizer - ESP32-C3 + SAM2695
+- Seeed Studio XIAO MIDI Synthesizer  — $22, tiny form factor, single-core RISC-V
 - Dream SAM2695 — hardware GM wavetable synth, 128 GM patches + drum kits, 64-voice polyphony
 - UART MIDI at 31250 baud, full CC/NRPN passthrough (filter, envelope, vibrato, reverb/chorus types)
 - 3.5mm stereo line out + onboard Class-D amplifier
@@ -56,6 +82,14 @@ Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX
 
 ### NSMBL_Synth — SAM2695 (`SeeedXiaoMIDI/NSMBL_Synth/`)
 Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthrough, NRPN support for filter cutoff/resonance, envelope, and vibrato. BLE MIDI parser with running status support. See `Docs/SAM2695_MIDI_Reference.md` for full CC/NRPN map.
+
+
+
+## Installing
+
+There are precompiled firmwares available for these boards. The easiest way to flash them is with the online tool from esspressiff. 
+
+
 
 ## Building
 
