@@ -168,18 +168,72 @@ EQ Level scale: 0x00=-12dB, 0x20=-6dB, 0x40=0dB, 0x60=+6dB, 0x7F=+12dB
 
 ---
 
+## Banks & Program Change
+
+Selecting a melodic sound is just a **Program Change** (PC, 1–128). The GM "families"
+(Piano, Bass, Sax…) are **not banks** — they're conventional groupings of the 128 program
+numbers, all living in the same bank. You reach any of them with a Program Change alone.
+
+**There are only two real banks** on the SAM2695, chosen with Bank Select MSB (CC 0):
+
+| CC 0 value | Sound set |
+|-----------|-----------|
+| **0** | General MIDI "capital" sounds — the standard 128 (§4-1) |
+| **127** | MT-32 sound variation — 128 alternate voices (§4-2) |
+
+- Values **1–126 are undefined**. Selecting one lands on an empty bank and the following
+  Program Change may produce no sound. Treat bank as a **toggle between 0 and 127**, never
+  an increment.
+- To select MT-32 variation: send `CC 0 = 127`, then the Program Change.
+- **Bank Select has no effect on drums** (channel 10) — per spec §3.
+
+---
+
+## Drums (MIDI Channel 10)
+
+Drums are not a patch — they are a **channel**. Any note sent on MIDI channel 10 (n=9)
+automatically plays a drum; the **note number picks the drum piece** (GM drum map):
+
+| Note | Drum | Note | Drum |
+|------|------|------|------|
+| 36 (C2) | Kick 1 | 42 (F#2) | Closed Hi-Hat |
+| 38 (D2) | Snare 1 | 46 (A#2) | Open Hi-Hat |
+| 37 (C#2) | Side Stick | 49 (C#3) | Crash Cymbal 1 |
+| 40 (E2) | Snare 2 | 51 (D#3) | Ride Cymbal 1 |
+
+On channel 10, **Program Change selects the KIT flavor** (not a single instrument). §4-3 lists:
+
+| PC | Drum Kit |
+|----|----------|
+| 1 | Standard Set |
+| 17 | Power Set |
+| 41 | Brush |
+| 49 | Orchestra |
+| 127 | CM-64/32 |
+
+A "drummer" build on the **XIAO + SAM2695** needs **no sample data** — just route incoming
+notes to channel 10 and the chip's built-in kits do the rest. (The SD-card sample-player
+drummer is a *different* firmware on the *AMYboard* — this board has only the SAM2695 chip.)
+
+---
+
 ## Key Quirks
 
-- **Bank Select before Program Change**: Always send CC 0 (Bank MSB) before the Program Change message
+- **Bank = GM (0) or MT-32 (127) only**: values 1–126 are empty; treat bank as a toggle. See Banks & Program Change above.
 - **Boot delay**: Chip needs ~500-600ms after reset before it accepts MIDI
 - **CC 80/81 are DREAM-specific**: Not standard GM controller numbers
-- **Channel 10 = Drums**: Channel index 9 (zero-indexed) is drums by default
+- **Channel 10 = Drums**: Note number picks the drum; PC picks the kit; Bank Select is ignored
 - **Polyphony**: 64 voices without effects, 38 voices with effects enabled
 - **Clipping mode**: Soft clip (default) vs hard clip — controllable via NRPN 3713h
 
 ---
 
 ## GM Patch Families (for reference)
+
+*These are groupings of the 128 GM programs in bank 0 — **not** separate banks. Reach any
+with a Program Change. Note: **113–120 "Percussive" are pitched melodic instruments**
+(Tinkle Bell, Agogo, Steel Drums, Taiko…), **not** a drum kit — real drums live on
+channel 10 (see [Drums](#drums-midi-channel-10)).*
 
 | PC Range | Family |
 |----------|--------|

@@ -15,8 +15,8 @@
 // Pads:
 //   0: Patch -    4: Sustain
 //   1: Patch +    5: Reset CCs
-//   2: Bank -     6: (reserved)
-//   3: Bank +     7: PANIC!
+//   2: GM bank    6: (reserved)
+//   3: MT-32 bank 7: PANIC!
 
 @Description
 NSMBL XIAO + SAM2695 Controller.
@@ -93,8 +93,8 @@ Pads = Patch/Bank nav, sustain, panic.
 @SetupPads
   LabelPad 0, {Patch -}
   LabelPad 1, {Patch +}
-  LabelPad 2, {Bank -}
-  LabelPad 3, {Bank +}
+  LabelPad 2, {GM}
+  LabelPad 3, {MT-32}
   LabelPad 4, {Sustain}
   LabelPad 5, {Reset}
   LabelPad 6, { }
@@ -284,30 +284,22 @@ Pads = Patch/Bank nav, sustain, panic.
     Log {Patch: }, curPatch, { Bank: }, curBank
 
   elseif pad = 2
-    // Bank -
-    if curBank > 0
-      Dec curBank
-    else
-      curBank = 127
-    endif
+    // GM sound bank (bank 0). SAM2695 has only two banks: 0=GM, 127=MT-32.
+    curBank = 0
     SendMIDIOut 0xB0 + ch, 0, curBank
     SendMIDIOut 0xC0 + ch, curPatch
     LabelPads {Patch }, curPatch, { Bank }, curBank
     FlashPad 2
-    Log {Bank: }, curBank
+    Log {Bank: GM}
 
   elseif pad = 3
-    // Bank +
-    if curBank < 127
-      Inc curBank
-    else
-      curBank = 0
-    endif
+    // MT-32 variation bank (bank 127)
+    curBank = 127
     SendMIDIOut 0xB0 + ch, 0, curBank
     SendMIDIOut 0xC0 + ch, curPatch
     LabelPads {Patch }, curPatch, { Bank }, curBank
     FlashPad 3
-    Log {Bank: }, curBank
+    Log {Bank: MT-32}
 
   elseif pad = 4
     // Sustain toggle

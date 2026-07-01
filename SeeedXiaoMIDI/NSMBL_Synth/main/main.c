@@ -41,9 +41,17 @@ static void process_midi_event(const midi_event_t *event)
         break;
 
     case MIDI_CC:
-        sam2695_control_change(ch, event->data1, event->data2);
-        if (event->data1 == 7 && ch == (MIDI_CHANNEL - 1)) {
-            current_volume = event->data2;
+        if (event->data1 == 0) {
+            // Bank Select MSB — SAM2695 has only bank 0 (GM) and 127 (MT-32).
+            // Clamp to those two and keep current_bank in sync so Program Changes
+            // (buttons or BLE) use the same bank the controller selected.
+            current_bank = (event->data2 == 0) ? 0 : 127;
+            sam2695_control_change(ch, 0, current_bank);
+        } else {
+            sam2695_control_change(ch, event->data1, event->data2);
+            if (event->data1 == 7 && ch == (MIDI_CHANNEL - 1)) {
+                current_volume = event->data2;
+            }
         }
         break;
 
@@ -86,15 +94,15 @@ static void on_short_press(uint8_t idx)
         ESP_LOGI(TAG, "Patch: [%d] %s", current_program,
                  GM_FAMILIES[current_program / 8]);
         break;
-    case 2:  // Next bank
-        current_bank = (current_bank + 1) & 0x7F;
+    case 2:  // GM sound bank (bank 0)
+        current_bank = 0;
         sam2695_program_change(ch, current_bank, current_program);
-        ESP_LOGI(TAG, "Bank: %d, Patch: %d", current_bank, current_program);
+        ESP_LOGI(TAG, "Bank: GM, Patch: %d", current_program);
         break;
-    case 3:  // Previous bank
-        current_bank = (current_bank - 1) & 0x7F;
+    case 3:  // MT-32 variation bank (bank 127)
+        current_bank = 127;
         sam2695_program_change(ch, current_bank, current_program);
-        ESP_LOGI(TAG, "Bank: %d, Patch: %d", current_bank, current_program);
+        ESP_LOGI(TAG, "Bank: MT-32, Patch: %d", current_program);
         break;
     }
 }

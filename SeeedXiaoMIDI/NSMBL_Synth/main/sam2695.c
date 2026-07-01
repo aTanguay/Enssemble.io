@@ -51,8 +51,11 @@ void sam2695_note_off(uint8_t channel, uint8_t note)
 
 void sam2695_program_change(uint8_t channel, uint8_t bank, uint8_t program)
 {
-    // Bank Select MSB must precede Program Change
-    uint8_t bank_msg[] = { (uint8_t)(0xB0 | (channel & 0x0F)), 0x00, bank & 0x7F };
+    // The SAM2695 has only two melodic banks: 0 = General MIDI, 127 = MT-32 variation.
+    // Values 1-126 are empty and would silence the Program Change, so clamp anything
+    // nonzero to 127. Bank Select MSB must precede the Program Change.
+    uint8_t bank_sel = (bank == 0) ? 0 : 127;
+    uint8_t bank_msg[] = { (uint8_t)(0xB0 | (channel & 0x0F)), 0x00, bank_sel };
     send_bytes(bank_msg, 3);
 
     uint8_t pc_msg[] = { (uint8_t)(0xC0 | (channel & 0x0F)), program & 0x7F };

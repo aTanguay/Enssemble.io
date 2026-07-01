@@ -57,30 +57,39 @@ static void parse_midi_message(const uint8_t *data, uint16_t len)
     int i = 1; // skip header byte
 
     while (i < len) {
-        // Each MIDI message is preceded by a timestamp byte (bit 7 set)
-        if (!(data[i] & 0x80)) {
-            ESP_LOGW(TAG, "Expected timestamp at offset %d, got 0x%02X", i, data[i]);
-            break;
-        }
-        i++; // skip timestamp
-        if (i >= len) break;
-
-        // Next byte: status byte (bit 7 set) or data byte (running status)
+        // A message boundary starts with either:
+        //   - a timestamp byte (MSB set), optionally followed by a status byte, or
+        //   - a data byte (MSB clear) that continues the previous running status.
         if (data[i] & 0x80) {
-            if (data[i] >= 0xF8) {
-                // System Real-Time — single byte, skip
-                i++;
-                continue;
-            }
-            if (data[i] >= 0xF0) {
-                // System Common (SysEx etc) — skip to next timestamp
-                while (i < len && !(data[i] & 0x80)) i++;
-                continue;
-            }
-            running_status = data[i++];
-        }
+            i++; // consume timestamp
+            if (i >= len) break;
 
-        if (running_status == 0 || i >= len) break;
+            // A status byte may follow the timestamp.
+            if (data[i] & 0x80) {
+                if (data[i] >= 0xF8) {
+                    // System Real-Time — single byte, no data, no effect on running status
+                    i++;
+                    continue;
+                }
+                if (data[i] >= 0xF0) {
+                    // System Common / SysEx — skip its data bytes, cancel running status
+                    i++;
+                    while (i < len && !(data[i] & 0x80)) i++;
+                    running_status = 0;
+                    continue;
+                }
+                running_status = data[i++]; // channel voice status
+            }
+            // else: timestamp immediately followed by running-status data
+        }
+        // else: running-status data with no timestamp — reuse running_status
+
+        if (running_status == 0) {
+            // Stray data byte with no established status — skip it
+            i++;
+            continue;
+        }
+        if (i >= len) break;
 
         int need = data_bytes_for_status(running_status);
         if (need < 0 || i + need > len) break;
