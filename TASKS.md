@@ -43,6 +43,14 @@
   - 10 knobs: volume, expression, reverb/chorus send+type, attack, release, vibrato rate/depth
   - 8 pads: patch/bank navigation, sustain, reset, PANIC
 - [x] BLE MIDI parser rewrite — proper running status support, debug logging
+- [x] SAM2695 bank fix — clamp to GM (0) / MT-32 (127), buttons+Mozaic as GM/MT-32 selectors
+- [x] Hardware buttons working — gpio_reset_pin + 50ms debounce (root cause was seating, not firmware)
+- [x] Volume-tracking fix — guard was broken in all-channel mode (MIDI_CHANNEL 0)
+
+### Deferred — XIAO firmware hygiene (low priority, not blocking)
+- [ ] Long-press timing 600ms → 1000ms to match Seeed reference (feel preference)
+- [ ] BLE RX buffer is fixed `uint8_t buf[128]` in `ble_midi.c` — size to negotiated MTU to avoid truncating very large bursts
+- [ ] Parser SysEx handling consumes the 0xF7 terminator as a timestamp (harmless, not strictly correct)
 
 ### Next — MVP for Spatial Composition
 - [ ] Flash 3 AMYboards: EEnoo (ch1 pads), Pryns (ch2 lead), Aufde (ch3 bass)
