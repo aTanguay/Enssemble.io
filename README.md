@@ -3,35 +3,35 @@
 
 **The Scrap Band**
 
-The goal of Enssemble is to make experimenting with what I like to call a 'scrap band' a lot easier and cheaper. Placing musical members/nodes around your room gives you a completely different (fun) experience than traditional than two channel stereo. I really strive to make them 100% wireless, so one can experiment at will. Running cables breaks the flow, and the metaphor.
+The goal of Enssemble is to make experimenting with what I like to call a 'scrap band' a lot easier and cheaper. Placing musical members/nodes around your room gives you a completely different (and fun) experience than traditional two channel stereo. I personally strive to make them 100% wireless, so one can experiment at will. Running cables breaks the flow, and the metaphor.
 
-To do a band, we make a collection of sound making devices, sequenced through one BLE MIDI source. I personally use AUMv3 on iOS for this. This is your brain. Just about any kind of sequencing you'd want is possible this way.
+To create a band, we make a collection of sound making devices, sequenced through one BLE MIDI source. I personally use AUMv3 on iOS for this. This is your brain (and can be a voice of course). Just about any kind of sequencing you'd want is possible this way...from generative, to traditional straight forward compositions.
 
 **The Member Nodes**
 
 Battery>Node>Amp>Speaker
 
-To get going, you need nodes, or 'members' to your band. The cheapest way I have found is a Seeed Studio Xiao MIDI synthesizer, a USB power brick, and a thrifted speaker...that's it. This could be done for $30-$50, depending on what you have available...most people have at least a few USB bricks around. So, a whole 'band' could cost you as little as $100, depending on what you have available. And frankly batteries are optional, but I go for no wires here.
+To get going, you need nodes, or 'members' to your band. The cheapest way I have found to make a good node is a Seeed Studio Xiao MIDI synthesizer, a USB power brick, and a thrifted speaker...that's it. This could be done for $30-$50, depending on what you have available...most people have at least a few USB bricks around. So, a whole 'band' could cost you as little as $100, depending on what you have available. And frankly batteries are optional, but I go for no wires here.
 
-Now that's the cheapest option, but there's nothing stopping you from using the speaker on the Xiao, or hooking up a stadium PA. That's your business.
+Now that's the cheapest 'good' option, but there's nothing stopping you from using the tiny speaker on the Xiao, or hooking up a stadium PA. That's your business.
 
 **Enssemble Firmwares**
 
-Right now, there are two paths for Enssemble firmware. The aforementioned Xiao, and then the 'AmyBoard'. This is a very cool, very cheap, very capable board that gives you some things that the Xiao doesn't have. The downside being the lack of built in amplifier. The Xiao has a surprisingly capable little Class D amp inside. So when powered, it's ready to go. 
+Right now, there are two paths for Enssemble firmware. The aforementioned Xiao, and then the 'AmyBoard'. This is a very cool, very cheap, very capable board that gives you some things that the Xiao doesn't have. The downside being the lack of built in amplifier. The Xiao has a surprisingly capable little Class D amp inside. So when powered and connected to a bookshelf speaker, it's ready to go. You'll be surprised!
 
 On the other hand, the Amyboard supports more modern synthesis, Sample playback, and midi in and out. As well as CV, if you wanna get nuts. But, you'll need powered speakers of some type. Which isn't the end of the world, but makes things more complicated.
 
 **Node control and sonic shaping**
 
-For this, I've been using Mozaic on iOS. The firmware support program change and passing CCs to whatever tweakable parameters the synths have. And keep in mind that the Xiao uses some older sound types, but that's half the fun...trying to make cool stuff out 
+For this, I've been using Mozaic on iOS. The firmware support program change and passing CCs to whatever tweakable parameters the synths have. And keep in mind that the Xiao uses some older sound types, but that's half the fun...trying to make cool stuff out a more limited palette 
+
+*(Note, these firmwares were made largely through vibe coding. If that sits with you wrong, for the love of god, keep it to yourself and don't use these free tools that somehow a computer is 100% responsible for, but also, somehow took me dozens of man-hours to make)*
 
 
 
+## What each node does
 
-
-## What It Does
-
-- Each unit advertises as a **BLE MIDI 1.0 peripheral** — connects to iOS with no pairing
+- Each unit advertises as a **BLE MIDI 1.0 peripheral** — connects to iOS as distinct nodes.
 - Receives Note On/Off, Program Change, Pitch Bend, and CCs
 - Per-unit MIDI channel filtering — each band member responds only to its assigned channel
 - Real-time sound shaping via standard MIDI CCs (filter, reverb, chorus, volume, pan)
@@ -39,23 +39,23 @@ For this, I've been using Mozaic on iOS. The firmware support program change and
 - AMYboard firmware variants: **AMY synth** (256 patches) and **sample player** (WAV kits from SD)
 - iOS control surface via **Mozaic** scripts
 
-## The Concept
 
-Multiple units deployed around a room. Each one is a band member — a different instrument, a different voice, placed wherever sounds right spatially. The iOS device is the bandleader. Sound comes from physically located objects rather than stereo speakers.
 
-Units are named after famous musicians. One name. No last name needed.
+## The Band (The Firmwares)
 
-## The Band
-
-| Name | Inspiration | Ch | Role | Default Patch | Firmware |
+| Name | Inspiration | MIDI Ch | Role | Default Patch | Firmware |
 |------|-------------|-----|------|---------------|----------|
-| **Eenoo** | Brian Eno | 1 | Pads/Ambient | Juno Synth Pad | AMY synth |
-| **Prynz** | Prince | 2 | Lead | Juno Lead I | AMY synth |
-| **Aufde** | Melissa Auf der Maur | 3 | Bass | Juno Synth Bass I | AMY synth |
-| **Kneel** | Neal Peart | 10 | Drums | 808 kit (SD card) | Sample player |
-| **Dapht** | Daft Punk | TBD | Samples | TBD | Future |
+| **Eenoo** | Brian Eno | 1 | Pads/Ambient | Synth Pad | Amy and Xiao |
+| **Prynz** | Prince | 2 | Lead | Synth Leads | Amy and Xiao |
+| **Botsee** | Bootsie Collins | 3 | Bass | Synth Bass | Amy and Xiao |
+| **8OhAte** | The 808 | 10 | Drums | GM Kits | Xiao Only |
+| **Kneel**  | Neal Peart      | 10      | Drums                | Sample Kits   | Amy Only     |
+| **Dapht**  | Daft Punk       | 4       | General Samples      | TBD           | Amy Only     |
+| **Garee** | Gary Numan | ALL | MIDI Out to Hardware | None | Amy Only |
 
 Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing each board.
+
+
 
 ## Hardware
 
@@ -72,6 +72,8 @@ Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing
 - UART MIDI at 31250 baud, full CC/NRPN passthrough (filter, envelope, vibrato, reverb/chorus types)
 - 3.5mm stereo line out + onboard Class-D amplifier
 
+
+
 ## Firmware Variants
 
 ### NSMBL_Synth — AMY Synth (`AmyBoard/NSMBL_Synth/`)
@@ -87,13 +89,13 @@ Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthroug
 
 ## Installing
 
-There are precompiled firmwares available for these boards. The easiest way to flash them is with the online tool from esspressiff. 
+There are many precompiled firmwares available for these boards. The easiest way to flash them is with the online tool from esspressiff. Depending on how many nodes you're making, you can install some or all of the firmwares, depending on their usage. 
 
 
 
 ## Building
 
-Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/) v5.x.
+Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/) v5.x. Not sure I'd do this
 
 ```bash
 # Source ESP-IDF
@@ -106,6 +108,8 @@ idf.py build
 idf.py -p /dev/cu.usbmodem* flash monitor
 ```
 
+
+
 ## iOS Setup
 
 1. Power on units — each plays a startup bleep
@@ -114,6 +118,10 @@ idf.py -p /dev/cu.usbmodem* flash monitor
 4. Play with a keyboard app, sequencer (Helium), or Mozaic control surface
 
 iOS handles 13+ simultaneous BLE connections — the full band is well within range.
+
+***CREATE DEMO VIDEO!***
+
+
 
 ## Mozaic Control Surface
 
@@ -125,6 +133,8 @@ iOS scripts in `Mozaic/` for the [Mozaic](https://ruismaker.com) MIDI scripting 
 | **NSMBL_XIAO_Controller.moz** | XIAO/SAM2695: Mix layout — XY filter pad, NRPNs, named reverb/chorus types, envelope, vibrato |
 | NSMBL_EEnoo_PatchSelect.moz | Simple patch bank selector |
 | NSMBL_EEnoo_SoundShaper.moz | CC knobs only |
+
+
 
 ## NSMBL CC Map
 
