@@ -52,6 +52,16 @@
 - [x] **Patch-nav MVP** — buttons 0/1 family jump (coarse), 2/3 single patch (fine), each auditions
 
 ### Deferred — XIAO firmware hygiene (low priority, not blocking)
+- [ ] **Audition blocks the MIDI task (~780ms)** — `audition_voice()` + PC delays run inside
+  `midi_task`, so incoming BLE events queue up while the preview plays; a held note's
+  note-off can stall, and a PC flood can overflow the 64-deep queue (silent drops).
+  Fix deliberately: add a UART write mutex FIRST (two tasks must never interleave bytes
+  to the SAM2695 — see the UART0 saga), then move the audition to its own task, then
+  hardware-test with a live MIDI stream. Do NOT do this casually.
+- [ ] Decide volume-button intent: long-press volume only adjusts VOICE_CHANNEL (ch1);
+  drums (ch10) stay at boot volume. If buttons should be "device volume", also send ch10.
+- [ ] Move `ble_midi_is_connected()` declaration into `ble_midi.h` (currently extern'd
+  inline in main.c's led_task)
 - [ ] Streamline PC band-aids (30ms bank/PC gaps, 250ms audition delay) now that the real
   UART0 bug is fixed — kept for now, "don't press our luck" (works reliably as-is)
 - [ ] Long-press timing 600ms → 1000ms to match Seeed reference (feel preference)

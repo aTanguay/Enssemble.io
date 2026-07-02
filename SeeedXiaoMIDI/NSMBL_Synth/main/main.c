@@ -20,7 +20,7 @@ static uint8_t  current_volume  = 100;
 static uint32_t last_note_ms    = 0;   // when the last incoming note arrived
 
 // A Program Change is silent on its own, so preview the new voice with a short
-// chord when a patch button is pressed while nothing is being played.
+// note when a patch button is pressed while nothing is being played.
 #define AUDITION_IDLE_MS 1200
 
 static uint32_t now_ms(void)
@@ -94,7 +94,7 @@ static void process_midi_event(const midi_event_t *event)
 }
 
 // --- Voice audition ---
-// Play a short C-major chord on the voice channel so a patch-button press is
+// Play a short preview note on the voice channel so a patch-button press is
 // audible. Skipped if a note arrived recently, so it won't interrupt playing.
 static void audition_voice(void)
 {
@@ -111,8 +111,6 @@ static void audition_voice(void)
 }
 
 // --- Button callbacks ---
-// Patch navigation: button 0 steps the voice down, button 1 steps it up, one
-// patch at a time through all 128 voices. Each press auditions the new voice.
 // Patch navigation:
 //   Button 0/1 = coarse — jump by instrument family (16 distinct voices)
 //   Button 2/3 = fine   — step one patch at a time within/across families

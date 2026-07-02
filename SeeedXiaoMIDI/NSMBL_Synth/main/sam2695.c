@@ -97,6 +97,7 @@ void sam2695_aftertouch(uint8_t channel, uint8_t pressure)
 
 void sam2695_all_notes_off(uint8_t channel)
 {
+    sam2695_control_change(channel, 64, 0);   // Sustain off — else held notes survive panic
     sam2695_control_change(channel, 120, 0);  // All Sound Off
     sam2695_control_change(channel, 123, 0);  // All Notes Off
 }
