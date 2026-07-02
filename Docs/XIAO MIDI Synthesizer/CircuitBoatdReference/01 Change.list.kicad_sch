@@ -1,0 +1,164 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "9.0")
+	(uuid "bca0a947-2592-4807-9f4d-68014b820570")
+	(paper "A4")
+	(title_block
+		(title "XIAO MIDI Synthesizer")
+		(date "2025-04-18")
+		(rev "v1.0")
+	)
+	(lib_symbols)
+	(rectangle
+		(start 69.596 64.008)
+		(end 228.346 136.398)
+		(stroke
+			(width 0)
+			(type dash)
+		)
+		(fill
+			(type none)
+		)
+		(uuid 14c39802-1d2d-412c-bf37-cc5bf197f5e3)
+	)
+	(rectangle
+		(start 69.596 70.358)
+		(end 228.346 136.398)
+		(stroke
+			(width 0)
+			(type dash)
+		)
+		(fill
+			(type none)
+		)
+		(uuid 51e619cb-d41d-47b8-9a2f-26db5c457775)
+	)
+	(rectangle
+		(start 69.596 94.996)
+		(end 228.346 136.398)
+		(stroke
+			(width 0)
+			(type dash)
+		)
+		(fill
+			(type none)
+		)
+		(uuid 53c6831f-33e3-4564-8d46-97be3abcc4e1)
+	)
+	(rectangle
+		(start 121.666 64.008)
+		(end 228.346 136.398)
+		(stroke
+			(width 0)
+			(type dash)
+		)
+		(fill
+			(type none)
+		)
+		(uuid 7687b230-d560-4ad7-8a14-52d2c3e3957a)
+	)
+	(rectangle
+		(start 69.596 87.376)
+		(end 228.346 136.398)
+		(stroke
+			(width 0)
+			(type dash)
+		)
+		(fill
+			(type none)
+		)
+		(uuid 90e58e7d-e2b0-47c5-8069-d1f94ea0d2cc)
+	)
+	(rectangle
+		(start 96.266 64.008)
+		(end 228.346 136.398)
+		(stroke
+			(width 0)
+			(type dash)
+		)
+		(fill
+			(type none)
+		)
+		(uuid a011fa76-2794-4dfb-8fcb-8396e7061d42)
+	)
+	(rectangle
+		(start 69.596 79.248)
+		(end 228.346 136.398)
+		(stroke
+			(width 0)
+			(type dash)
+		)
+		(fill
+			(type none)
+		)
+		(uuid f3b998d7-14e6-49c9-8cbe-27eab5107f53)
+	)
+	(text "v1.0"
+		(exclude_from_sim no)
+		(at 109.22 75.438 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
+				(color 0 0 255 1)
+			)
+		)
+		(uuid "330d5418-e542-4636-9be1-fc7d83ee3326")
+	)
+	(text "   DATE                REVISION                DESCRIPTION\n"
+		(exclude_from_sim no)
+		(at 76.454 68.58 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.4)
+				(bold yes)
+				(color 0 0 255 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "4a23545b-0e04-4abb-a63c-8b5fc5794b5c")
+	)
+	(text "1.Initial"
+		(exclude_from_sim no)
+		(at 132.334 75.438 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
+				(color 0 0 255 1)
+			)
+		)
+		(uuid "5c110c3c-4ffb-436f-bff5-3509fc4c97f1")
+	)
+	(text "Revision History"
+		(exclude_from_sim no)
+		(at 71.882 61.722 0)
+		(effects
+			(font
+				(size 2 2)
+				(thickness 0.5)
+				(bold yes)
+				(color 0 0 255 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "f356ccca-0868-4161-b926-7428f0e62842")
+	)
+	(text "2025/04/18"
+		(exclude_from_sim no)
+		(at 82.296 75.184 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
+				(color 0 0 255 1)
+			)
+		)
+		(uuid "fe19ea22-605c-4075-869e-9cd091d6963d")
+	)
+)
