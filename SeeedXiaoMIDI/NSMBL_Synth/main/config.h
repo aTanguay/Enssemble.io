@@ -3,9 +3,15 @@
 // --- Band Member Identity ---
 // Copy a named config from configs/ to customize
 #define DEVICE_NAME     "NSMBL_Synth"
-#define MIDI_CHANNEL    0       // 0 = all channels, 1-16 = single channel filter
 #define DEFAULT_PATCH   0
 #define DEFAULT_BANK    0
+
+// --- Channel behavior ---
+// The unit listens on exactly two MIDI channels and ignores all others, like a
+// normal hardware synth — you route in your host (AUM). Send melody to MIDI
+// channel 1 and GM drums to channel 10; anything else is dropped by the parser.
+#define VOICE_CHANNEL   0       // melodic voice (internal 0 = MIDI channel 1)
+#define DRUM_CHANNEL    9       // GM drums   (internal 9 = MIDI channel 10)
 
 // --- Hardware Pins (XIAO ESP32-C3) ---
 #define BUTTON_0_PIN    5

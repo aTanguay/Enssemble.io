@@ -95,9 +95,12 @@ static void parse_midi_message(const uint8_t *data, uint16_t len)
         if (need < 0 || i + need > len) break;
 
         uint8_t msg_type = running_status & 0xF0;
-        uint8_t channel = (running_status & 0x0F) + 1;
+        uint8_t ch0     = running_status & 0x0F;         // 0-indexed channel
+        uint8_t channel = ch0 + 1;                       // 1-indexed for event
 
-        if (channel != MIDI_CHANNEL && MIDI_CHANNEL != 0) {
+        // Listen only on the melodic voice channel and the drum channel; drop
+        // everything else so a busy unused channel can't crowd the queue.
+        if (ch0 != VOICE_CHANNEL && ch0 != DRUM_CHANNEL) {
             i += need;
             continue;
         }

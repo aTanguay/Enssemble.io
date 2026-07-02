@@ -27,9 +27,13 @@ static const char *GM_FAMILIES[] = {
 };
 
 // --- MIDI event processing ---
+// The parser only delivers events on VOICE_CHANNEL (melody, MIDI ch1) and
+// DRUM_CHANNEL (GM drums, MIDI ch10), so each message just plays on its own
+// channel. Program/bank/volume state is tracked for the melodic voice only.
 static void process_midi_event(const midi_event_t *event)
 {
-    uint8_t ch = event->channel - 1;  // SAM2695 uses 0-indexed channels
+    uint8_t ch    = event->channel - 1;              // VOICE_CHANNEL or DRUM_CHANNEL
+    bool    drums = (ch == DRUM_CHANNEL);
 
     switch (event->type) {
     case MIDI_NOTE_ON:
@@ -41,23 +45,25 @@ static void process_midi_event(const midi_event_t *event)
         break;
 
     case MIDI_CC:
-        if (event->data1 == 0) {
+        if (!drums && event->data1 == 0) {
             // Bank Select MSB — SAM2695 has only bank 0 (GM) and 127 (MT-32).
-            // Clamp to those two and keep current_bank in sync so Program Changes
-            // (buttons or BLE) use the same bank the controller selected.
+            // Clamp and track it so the next Program Change uses the same bank.
             current_bank = (event->data2 == 0) ? 0 : 127;
-            sam2695_control_change(ch, 0, current_bank);
+            sam2695_control_change(VOICE_CHANNEL, 0, current_bank);
         } else {
             sam2695_control_change(ch, event->data1, event->data2);
-            if (event->data1 == 7 && (MIDI_CHANNEL == 0 || ch == (MIDI_CHANNEL - 1))) {
+            if (!drums && event->data1 == 7) {
                 current_volume = event->data2;
             }
         }
         break;
 
     case MIDI_PROGRAM_CHANGE:
-        sam2695_program_change(ch, current_bank, event->data1);
-        if (ch == (MIDI_CHANNEL - 1) || MIDI_CHANNEL == 0) {
+        if (drums) {
+            // On channel 10 a Program Change selects the drum kit (bank 0).
+            sam2695_program_change(DRUM_CHANNEL, 0, event->data1);
+        } else {
+            sam2695_program_change(VOICE_CHANNEL, current_bank, event->data1);
             current_program = event->data1;
             ESP_LOGI(TAG, "Patch: [%d] %s", event->data1,
                      GM_FAMILIES[event->data1 / 8]);
@@ -79,7 +85,7 @@ static void process_midi_event(const midi_event_t *event)
 // --- Button callbacks ---
 static void on_short_press(uint8_t idx)
 {
-    uint8_t ch = (MIDI_CHANNEL > 0) ? MIDI_CHANNEL - 1 : 0;
+    uint8_t ch = VOICE_CHANNEL;  // buttons drive the single melodic voice
 
     switch (idx) {
     case 0:  // Next patch
@@ -114,12 +120,12 @@ static void on_long_press(uint8_t idx)
         break;
     case 1:  // Volume up
         current_volume = (current_volume + 10 > 127) ? 127 : current_volume + 10;
-        sam2695_set_volume((MIDI_CHANNEL > 0) ? MIDI_CHANNEL - 1 : 0, current_volume);
+        sam2695_set_volume(VOICE_CHANNEL, current_volume);
         ESP_LOGI(TAG, "Volume: %d", current_volume);
         break;
     case 2:  // Volume down
         current_volume = (current_volume < 10) ? 0 : current_volume - 10;
-        sam2695_set_volume((MIDI_CHANNEL > 0) ? MIDI_CHANNEL - 1 : 0, current_volume);
+        sam2695_set_volume(VOICE_CHANNEL, current_volume);
         ESP_LOGI(TAG, "Volume: %d", current_volume);
         break;
     case 3:  // MIDI panic
@@ -194,19 +200,18 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 
-    // Set default patch
-    uint8_t local_ch = (MIDI_CHANNEL > 0) ? MIDI_CHANNEL - 1 : 0;
-    sam2695_program_change(local_ch, current_bank, current_program);
+    // Set default melodic voice on the voice channel
+    sam2695_program_change(VOICE_CHANNEL, current_bank, current_program);
     vTaskDelay(pdMS_TO_TICKS(50));
 
-    // Default reverb/chorus
-    sam2695_control_change(local_ch, 0x50, 1);   // Reverb type: Room 2
-    sam2695_control_change(local_ch, 0x5B, 30);  // Reverb send: 30
-    sam2695_control_change(local_ch, 0x51, 0);   // Chorus type: Chorus 1
-    sam2695_control_change(local_ch, 0x5D, 0);   // Chorus send: 0
+    // Default reverb/chorus on the voice channel
+    sam2695_control_change(VOICE_CHANNEL, 0x50, 1);   // Reverb type: Room 2
+    sam2695_control_change(VOICE_CHANNEL, 0x5B, 30);  // Reverb send: 30
+    sam2695_control_change(VOICE_CHANNEL, 0x51, 0);   // Chorus type: Chorus 1
+    sam2695_control_change(VOICE_CHANNEL, 0x5D, 0);   // Chorus send: 0
 
-    // Boot sound
-    sam2695_boot_sound(local_ch);
+    // Boot sound — the signature beat plays on the drum channel
+    sam2695_boot_sound(DRUM_CHANNEL);
 
     // Buttons
     buttons_init(on_short_press, on_long_press);
