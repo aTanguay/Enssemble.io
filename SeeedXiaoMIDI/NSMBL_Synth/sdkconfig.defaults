@@ -15,8 +15,13 @@ CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
 # Main task stack size
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 
-# Console via USB-Serial-JTAG (frees UART0 for SAM2695)
+# Console via USB-Serial-JTAG (frees UART0 for SAM2695).
+# CRITICAL: UART0 is the SAM2695 MIDI port. If the console stays on UART0, every
+# log line is transmitted to the chip as garbage MIDI and corrupts its state
+# (stuck/wrong patch, intermittent behavior). Keep the console OFF UART0.
+CONFIG_ESP_CONSOLE_UART_DEFAULT=n
 CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 
 # Logging
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y

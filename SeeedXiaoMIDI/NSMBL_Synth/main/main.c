@@ -14,9 +14,19 @@
 static const char *TAG = "nsmbl";
 
 // --- Voice state ---
-static uint8_t current_program = DEFAULT_PATCH;
-static uint8_t current_bank    = DEFAULT_BANK;
-static uint8_t current_volume  = 100;
+static uint8_t  current_program = DEFAULT_PATCH;
+static uint8_t  current_bank    = DEFAULT_BANK;
+static uint8_t  current_volume  = 100;
+static uint32_t last_note_ms    = 0;   // when the last incoming note arrived
+
+// A Program Change is silent on its own, so preview the new voice with a short
+// chord when a patch button is pressed while nothing is being played.
+#define AUDITION_IDLE_MS 1200
+
+static uint32_t now_ms(void)
+{
+    return (uint32_t)(esp_timer_get_time() / 1000);
+}
 
 // --- GM Patch names (first 10 of each family for display) ---
 static const char *GM_FAMILIES[] = {
@@ -37,6 +47,7 @@ static void process_midi_event(const midi_event_t *event)
 
     switch (event->type) {
     case MIDI_NOTE_ON:
+        last_note_ms = now_ms();
         sam2695_note_on(ch, event->data1, event->data2);
         break;
 
@@ -82,33 +93,51 @@ static void process_midi_event(const midi_event_t *event)
     }
 }
 
+// --- Voice audition ---
+// Play a short C-major chord on the voice channel so a patch-button press is
+// audible. Skipped if a note arrived recently, so it won't interrupt playing.
+static void audition_voice(void)
+{
+    if (last_note_ms != 0 && (now_ms() - last_note_ms) < AUDITION_IDLE_MS) {
+        return;
+    }
+    // The SAM2695 needs time to load the new patch's wavetable after a Program
+    // Change; a note played too soon (<~150ms) still uses the OLD patch. 250ms
+    // is a safe margin so the preview always reflects the selected voice.
+    vTaskDelay(pdMS_TO_TICKS(250));
+    sam2695_note_on(VOICE_CHANNEL, 60, 110);   // single C4 preview note
+    vTaskDelay(pdMS_TO_TICKS(500));
+    sam2695_note_off(VOICE_CHANNEL, 60);
+}
+
 // --- Button callbacks ---
+// Patch navigation: button 0 steps the voice down, button 1 steps it up, one
+// patch at a time through all 128 voices. Each press auditions the new voice.
+// Buttons 2/3 are unused for now.
 static void on_short_press(uint8_t idx)
 {
-    uint8_t ch = VOICE_CHANNEL;  // buttons drive the single melodic voice
-
     switch (idx) {
-    case 0:  // Next patch
-        current_program = (current_program + 1) & 0x7F;
-        sam2695_program_change(ch, current_bank, current_program);
-        ESP_LOGI(TAG, "Patch: [%d] %s", current_program,
+    case 0: {  // Family down — jump to the previous instrument family
+        uint8_t fam = (current_program / 8 + 15) & 0x0F;   // -1 family, wraps 0..15
+        current_program = fam * 8;
+        sam2695_program_change(VOICE_CHANNEL, current_bank, current_program);
+        ESP_LOGI(TAG, "Family down -> [%d] %s", current_program,
                  GM_FAMILIES[current_program / 8]);
+        audition_voice();
         break;
-    case 1:  // Previous patch
-        current_program = (current_program - 1) & 0x7F;
-        sam2695_program_change(ch, current_bank, current_program);
-        ESP_LOGI(TAG, "Patch: [%d] %s", current_program,
+    }
+    case 1: {  // Family up — jump to the next instrument family
+        uint8_t fam = (current_program / 8 + 1) & 0x0F;    // +1 family, wraps 0..15
+        current_program = fam * 8;
+        sam2695_program_change(VOICE_CHANNEL, current_bank, current_program);
+        ESP_LOGI(TAG, "Family up   -> [%d] %s", current_program,
                  GM_FAMILIES[current_program / 8]);
+        audition_voice();
         break;
-    case 2:  // GM sound bank (bank 0)
-        current_bank = 0;
-        sam2695_program_change(ch, current_bank, current_program);
-        ESP_LOGI(TAG, "Bank: GM, Patch: %d", current_program);
-        break;
-    case 3:  // MT-32 variation bank (bank 127)
-        current_bank = 127;
-        sam2695_program_change(ch, current_bank, current_program);
-        ESP_LOGI(TAG, "Bank: MT-32, Patch: %d", current_program);
+    }
+    case 2:
+    case 3:
+        // unused for now
         break;
     }
 }
@@ -202,6 +231,8 @@ void app_main(void)
 
     // Set default melodic voice on the voice channel
     sam2695_program_change(VOICE_CHANNEL, current_bank, current_program);
+    ESP_LOGI(TAG, "Boot voice -> patch %d [%s] bank %d",
+             current_program, GM_FAMILIES[current_program / 8], current_bank);
     vTaskDelay(pdMS_TO_TICKS(50));
 
     // Default reverb/chorus on the voice channel

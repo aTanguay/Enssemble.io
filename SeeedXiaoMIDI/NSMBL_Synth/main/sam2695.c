@@ -32,6 +32,12 @@ esp_err_t sam2695_init(void)
     // SAM2695 needs ~500-600ms after power-up
     vTaskDelay(pdMS_TO_TICKS(600));
 
+    // GM System On — put the chip into General MIDI mode so Program Changes
+    // select GM instruments. (F0 7E 7F 09 01 F7)
+    uint8_t gm_on[] = { 0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7 };
+    send_bytes(gm_on, sizeof(gm_on));
+    vTaskDelay(pdMS_TO_TICKS(300));
+
     ESP_LOGI(TAG, "SAM2695 UART initialized (baud=%d, tx=%d, rx=%d)",
              SAM_UART_BAUD, SAM_TX_PIN, SAM_RX_PIN);
     return ESP_OK;
@@ -53,13 +59,20 @@ void sam2695_program_change(uint8_t channel, uint8_t bank, uint8_t program)
 {
     // The SAM2695 has only two melodic banks: 0 = General MIDI, 127 = MT-32 variation.
     // Values 1-126 are empty and would silence the Program Change, so clamp anything
-    // nonzero to 127. Bank Select MSB must precede the Program Change.
+    // nonzero to 127.
+    //
+    // IMPORTANT: the chip needs a brief gap between the Bank Select and the
+    // Program Change. Sent back-to-back (no delay) the PC is mis-processed and
+    // the patch does NOT change — every note keeps playing the old/default
+    // voice. This bit us for hours; the delays below are required, not optional.
     uint8_t bank_sel = (bank == 0) ? 0 : 127;
     uint8_t bank_msg[] = { (uint8_t)(0xB0 | (channel & 0x0F)), 0x00, bank_sel };
     send_bytes(bank_msg, 3);
+    vTaskDelay(pdMS_TO_TICKS(30));
 
     uint8_t pc_msg[] = { (uint8_t)(0xC0 | (channel & 0x0F)), program & 0x7F };
     send_bytes(pc_msg, 2);
+    vTaskDelay(pdMS_TO_TICKS(30));
 }
 
 void sam2695_control_change(uint8_t channel, uint8_t cc, uint8_t value)
