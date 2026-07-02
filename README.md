@@ -85,6 +85,8 @@ Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX
 ### NSMBL_Synth — SAM2695 (`SeeedXiaoMIDI/NSMBL_Synth/`)
 Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthrough, NRPN support for filter cutoff/resonance, envelope, and vibrato. BLE MIDI parser with running status support. Listens on **MIDI channel 1** (melody) and **channel 10** (GM drums); other channels are ignored (route in your host). See `Docs/SAM2695_MIDI_Reference.md` for full CC/NRPN map.
 
+Per-unit identities live in `SeeedXiaoMIDI/NSMBL_Synth/configs/` — copy one to `main/config.h` before flashing so each module shows up with its own BLE name in AUM: **NSMBL_Jami** (lead, saw lead default), **NSMBL_Bowee** (strings default), **NSMBL_Ryngo** (drums — sequence ch10).
+
 **Hardware buttons** (patch browsing, each press auditions the voice):
 
 | Button | Tap | Hold |
