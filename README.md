@@ -83,7 +83,18 @@ Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX
 16-slice drum sample player. Reads WAV files with cue point markers from SD card. 4-voice polyphony, velocity-sensitive, chromatic mapping from C2. Used by Kneel.
 
 ### NSMBL_Synth — SAM2695 (`SeeedXiaoMIDI/NSMBL_Synth/`)
-Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthrough, NRPN support for filter cutoff/resonance, envelope, and vibrato. BLE MIDI parser with running status support. See `Docs/SAM2695_MIDI_Reference.md` for full CC/NRPN map.
+Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthrough, NRPN support for filter cutoff/resonance, envelope, and vibrato. BLE MIDI parser with running status support. Listens on **MIDI channel 1** (melody) and **channel 10** (GM drums); other channels are ignored (route in your host). See `Docs/SAM2695_MIDI_Reference.md` for full CC/NRPN map.
+
+**Hardware buttons** (patch browsing, each press auditions the voice):
+
+| Button | Tap | Hold |
+|--------|-----|------|
+| 0 | Family down (coarse, −8) | — |
+| 1 | Family up (coarse, +8) | Volume up |
+| 2 | Patch down (fine, −1) | Volume down |
+| 3 | Patch up (fine, +1) | MIDI panic |
+
+> ⚠️ **Build gotcha:** the ESP-IDF console **must** stay off UART0 (it's the SAM2695's MIDI port). If it doesn't, log output corrupts the chip and patch changes silently fail. `sdkconfig` must show `CONFIG_ESP_CONSOLE_UART_NUM=-1`. See PLANNING.md → Technical Notes.
 
 
 

@@ -46,8 +46,14 @@
 - [x] SAM2695 bank fix — clamp to GM (0) / MT-32 (127), buttons+Mozaic as GM/MT-32 selectors
 - [x] Hardware buttons working — gpio_reset_pin + 50ms debounce (root cause was seating, not firmware)
 - [x] Volume-tracking fix — guard was broken in all-channel mode (MIDI_CHANNEL 0)
+- [x] **Program changes fixed** — real cause was ESP-IDF console on UART0 corrupting the
+  SAM's MIDI; moved console to USB-JTAG (`CONFIG_ESP_CONSOLE_UART_NUM=-1`). GM System On at boot.
+- [x] Channel model — listen on ch1 (melody) + ch10 (drums), ignore the rest
+- [x] **Patch-nav MVP** — buttons 0/1 family jump (coarse), 2/3 single patch (fine), each auditions
 
 ### Deferred — XIAO firmware hygiene (low priority, not blocking)
+- [ ] Streamline PC band-aids (30ms bank/PC gaps, 250ms audition delay) now that the real
+  UART0 bug is fixed — kept for now, "don't press our luck" (works reliably as-is)
 - [ ] Long-press timing 600ms → 1000ms to match Seeed reference (feel preference)
 - [ ] BLE RX buffer is fixed `uint8_t buf[128]` in `ble_midi.c` — size to negotiated MTU to avoid truncating very large bursts
 - [ ] Parser SysEx handling consumes the 0xF7 terminator as a timestamp (harmless, not strictly correct)

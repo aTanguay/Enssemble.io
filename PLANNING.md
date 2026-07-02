@@ -178,14 +178,28 @@ XIAO (ESP32-C3, single-core):
 ### SAM2695 (XIAO platform)
 - Needs ~500-600ms after power-up before accepting MIDI
 - Pitch Bend must be sent as raw MIDI bytes
-- Bank Select (CC 0) must precede Program Change
+- Bank Select (CC 0) must precede Program Change; only bank 0 (GM) / 127 (MT-32) valid
 - Channel indexing: BLE MIDI uses 1-16, SAM2695 uses 0-15
 - Drum channel (10) volume defaults low — set explicitly
 
+### ⚠️ CRITICAL: keep the ESP-IDF console OFF UART0 (XIAO+SAM2695)
+UART0 is the SAM2695's MIDI port. If the ESP-IDF console stays on UART0 (the
+default!), every `ESP_LOGI` is transmitted to the chip as garbage MIDI and
+corrupts its state — program changes stop working and every note plays one
+stuck bell-like sound (intermittent, correlates with logging). This cost us a
+full debugging session. Guard rails:
+- `sdkconfig.defaults` must set `CONFIG_ESP_CONSOLE_UART_DEFAULT=n`,
+  `CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y`, `CONFIG_ESP_CONSOLE_SECONDARY_NONE=y`
+- Editing `sdkconfig.defaults` does nothing if `sdkconfig` already exists —
+  delete `sdkconfig` and rebuild to apply it
+- Verify the built `sdkconfig` shows `CONFIG_ESP_CONSOLE_UART_NUM=-1` (NOT 0)
+- The Arduino library avoids this by keeping debug on USB `Serial` + synth on `Serial0`
+
 ### Hardware — XIAO ESP32-C3
 - Button pins (active LOW, internal pullup): GPIO 5, 4, 3, 2
-- SAM2695 on Serial UART at 31250 baud
+- SAM2695 on UART0 at 31250 baud (TX=21, RX=20) — console MUST be on USB-JTAG, see above
 - LED = GPIO 10, active LOW
+- Patch nav buttons: 0/1 = family jump (coarse), 2/3 = single patch (fine)
 
 ### Hardware — AMYboard ESP32-S3
 - AMY software synth engine (250 oscillators, dual-core rendering)
@@ -208,6 +222,21 @@ XIAO (ESP32-C3, single-core):
 ---
 
 ## Session Log
+
+### 2026-07-02 — XIAO patch-nav MVP + the UART0/console bug
+- **Root-caused the "patch never changes / stuck bell" bug**: the ESP-IDF debug
+  console was on UART0 — the SAM2695's MIDI port. Log text was being transmitted
+  to the chip as garbage MIDI and corrupting its state. Fix: force console to
+  USB-Serial-JTAG, delete stale `sdkconfig`, rebuild (`CONFIG_ESP_CONSOLE_UART_NUM=-1`).
+  See the CRITICAL warning in Technical Notes. Verified on two units.
+- Chased many red herrings first (bank clamp, timing gaps, GM-On, wavetable
+  delay) — all band-aids; the console was the real cause. GM-On kept as good practice.
+- Confirmed the SAM2695 is multitimbral; unit listens on ch1 (melody) + ch10 (drums),
+  ignores other channels (host routes). Buttons own patch selection.
+- Patch nav: buttons 0/1 jump by GM family (coarse, 16 voices), 2/3 step by one
+  patch (fine). Each press auditions a single C4 preview note.
+- Also fixed earlier this session: BLE running-status parser, GM/MT-32 bank
+  handling, button hardening (gpio_reset_pin + debounce), volume tracking.
 
 ### 2026-07-01 — XIAO Platform: SAM2695 Reference, Mozaic Controller, BLE Parser Fix
 - Extracted full SAM2695 MIDI reference from chip spec PDF → `Docs/SAM2695_MIDI_Reference.md`

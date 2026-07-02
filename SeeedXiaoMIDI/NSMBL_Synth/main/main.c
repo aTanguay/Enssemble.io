@@ -113,7 +113,10 @@ static void audition_voice(void)
 // --- Button callbacks ---
 // Patch navigation: button 0 steps the voice down, button 1 steps it up, one
 // patch at a time through all 128 voices. Each press auditions the new voice.
-// Buttons 2/3 are unused for now.
+// Patch navigation:
+//   Button 0/1 = coarse — jump by instrument family (16 distinct voices)
+//   Button 2/3 = fine   — step one patch at a time within/across families
+// Each press auditions the new voice.
 static void on_short_press(uint8_t idx)
 {
     switch (idx) {
@@ -135,9 +138,19 @@ static void on_short_press(uint8_t idx)
         audition_voice();
         break;
     }
-    case 2:
-    case 3:
-        // unused for now
+    case 2:  // Patch down — fine step to the previous voice
+        current_program = (current_program == 0) ? 127 : (current_program - 1);
+        sam2695_program_change(VOICE_CHANNEL, current_bank, current_program);
+        ESP_LOGI(TAG, "Patch down  -> [%d] %s", current_program,
+                 GM_FAMILIES[current_program / 8]);
+        audition_voice();
+        break;
+    case 3:  // Patch up — fine step to the next voice
+        current_program = (current_program + 1) & 0x7F;
+        sam2695_program_change(VOICE_CHANNEL, current_bank, current_program);
+        ESP_LOGI(TAG, "Patch up    -> [%d] %s", current_program,
+                 GM_FAMILIES[current_program / 8]);
+        audition_voice();
         break;
     }
 }
