@@ -48,13 +48,21 @@ AMY handles internally: CC 0 (bank select), CC 64 (sustain), CC 123 (all notes o
 ### The Band — Full Roster
 *Names riff on famous musicians. Configs in `AmyBoard/configs/`.*
 
-| Name | Inspiration | Channel | Default Patch | Role | Firmware | Status |
-|------|-------------|---------|---------------|------|----------|--------|
-| EEnoo | Brian Eno | 1 | Juno #47 Synth Pad | Pads/Ambient | NSMBL_Synth | ✅ Ready |
-| Pryns | Prince | 2 | Juno #32 Lead I | Lead | NSMBL_Synth | ✅ Ready |
-| Aufde | Melissa Auf der Maur | 3 | Juno #31 Synth Bass I | Bass | NSMBL_Synth | ✅ Ready |
-| Kneel | Neal Peart | 10 | SD card kits | Drums | NSMBL_SampleKits | ✅ Ready |
-| Dapht | Daft Punk | TBD | SD card samples | Samples/Vocal | TBD | 🔮 Future |
+
+
+| Name       | Inspiration     | MIDI Ch | Role                 | Default Patch | Firmware     | Xiao Status | Amy Status |
+| ---------- | --------------- | ------- | -------------------- | ------------- | ------------ | ----------- | ---------- |
+| **Eenoo**  | Brian Eno       | 1       | Pads/Ambient         | Synth Pad     | Amy and Xiao | ✅ Ready     |            |
+| **Prynz**  | Prince          | 2       | Lead                 | Synth Leads   | Amy and Xiao | ✅ Ready     |            |
+| **Botsee** | Bootsie Collins | 3       | Bass                 | Synth Bass    | Amy and Xiao | ✅ Ready     |            |
+| **8OhAte** | The 808         | 10      | Drums                | GM Kits       | Xiao Only    | ✅ Ready     |            |
+| **Kneel**  | Neal Peart      | 10      | Drums                | Sample Kits   | Amy Only     |             |            |
+| **Dapht**  | Daft Punk       | 4       | General Samples      | TBD           | Amy Only     |             |            |
+| **Garee**  | Gary Numan      | ALL     | MIDI Out to Hardware | None          | Amy Only     |             |            |
+
+Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing each board.
+
+
 
 ---
 
