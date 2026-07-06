@@ -12,10 +12,9 @@
 #define DEFAULT_BANK    0
 
 // --- Channel behavior ---
-// Listens on VOICE_CHANNEL (melody) + DRUM_CHANNEL (GM drums), ignores the rest.
-// Roster channel for Eenoo is MIDI ch1 -> VOICE_CHANNEL 0.
-#define VOICE_CHANNEL   0       // melody on MIDI channel 1
-#define DRUM_CHANNEL    9       // GM drums on MIDI channel 10
+// Listens ONLY on its roster channel (MIDI ch1). DRUM_CHANNEL disabled (> 15).
+#define VOICE_CHANNEL   0       // Eenoo listens only on MIDI channel 1
+#define DRUM_CHANNEL    0xFF    // no drums — single-channel synth
 
 // --- Hardware Pins (XIAO ESP32-C3) ---
 #define BUTTON_0_PIN    5

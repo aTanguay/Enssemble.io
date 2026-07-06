@@ -1,0 +1,5 @@
+# ESP-IDF build output
+build/
+
+# Compiled per-member firmware BINs (built from configs/, attached to releases)
+prebuilt/

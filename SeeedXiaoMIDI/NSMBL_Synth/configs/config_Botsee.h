@@ -12,10 +12,9 @@
 #define DEFAULT_BANK    0
 
 // --- Channel behavior ---
-// Listens on VOICE_CHANNEL (melody) + DRUM_CHANNEL (GM drums), ignores the rest.
-// Roster channel for Botsee is MIDI ch3 -> VOICE_CHANNEL 2.
-#define VOICE_CHANNEL   2       // melody on MIDI channel 3
-#define DRUM_CHANNEL    9       // GM drums on MIDI channel 10
+// Listens ONLY on its roster channel (MIDI ch3). DRUM_CHANNEL disabled (> 15).
+#define VOICE_CHANNEL   2       // Botsee listens only on MIDI channel 3
+#define DRUM_CHANNEL    0xFF    // no drums — single-channel synth
 
 // --- Hardware Pins (XIAO ESP32-C3) ---
 #define BUTTON_0_PIN    5

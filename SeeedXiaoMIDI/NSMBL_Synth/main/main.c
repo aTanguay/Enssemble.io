@@ -252,8 +252,16 @@ void app_main(void)
     sam2695_control_change(VOICE_CHANNEL, 0x51, 0);   // Chorus type: Chorus 1
     sam2695_control_change(VOICE_CHANNEL, 0x5D, 0);   // Chorus send: 0
 
-    // Boot sound — the signature beat plays on the drum channel
+    // Boot flourish: a drummer (DRUM_CHANNEL is a real MIDI channel 0-15) gets
+    // the signature beat; a synth (DRUM_CHANNEL disabled, > 15) gets a short
+    // hello note in its own voice.
+#if DRUM_CHANNEL <= 15
     sam2695_boot_sound(DRUM_CHANNEL);
+#else
+    sam2695_note_on(VOICE_CHANNEL, 60, 100);
+    vTaskDelay(pdMS_TO_TICKS(350));
+    sam2695_note_off(VOICE_CHANNEL, 60);
+#endif
 
     // Buttons
     buttons_init(on_short_press, on_long_press);

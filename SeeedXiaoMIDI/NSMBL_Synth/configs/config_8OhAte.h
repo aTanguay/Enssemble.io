@@ -16,10 +16,10 @@
 #define DEFAULT_BANK    0
 
 // --- Channel behavior ---
-// Listens on VOICE_CHANNEL (melody) + DRUM_CHANNEL (GM drums), ignores the rest.
-// 8OhAte is the drummer — the action is on MIDI ch10 (DRUM_CHANNEL).
-#define VOICE_CHANNEL   0       // melody on MIDI channel 1 (secondary)
-#define DRUM_CHANNEL    9       // GM drums on MIDI channel 10 (primary)
+// Listens ONLY on MIDI channel 10 (drums). Both channels = 9 so the parser
+// passes only ch10, and MIDI ch10 is always GM drums on the SAM2695.
+#define VOICE_CHANNEL   9       // 8OhAte listens only on MIDI channel 10
+#define DRUM_CHANNEL    9       // MIDI channel 10 = GM drums
 
 // --- Hardware Pins (XIAO ESP32-C3) ---
 #define BUTTON_0_PIN    5
