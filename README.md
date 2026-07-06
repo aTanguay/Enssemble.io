@@ -48,6 +48,7 @@ For this, I've been using Mozaic on iOS. The firmware support program change and
 | **Eenoo** | Brian Eno | 1 | Pads/Ambient | Synth Pad | Amy and Xiao |
 | **Prynz** | Prince | 2 | Lead | Synth Leads | Amy and Xiao |
 | **Botsee** | Bootsie Collins | 3 | Bass | Synth Bass | Amy and Xiao |
+| **Moroh** | Giorgio Moroder | 5 | Arps / Sequences | Synth Lead | Amy and Xiao |
 | **8OhAte** | The 808 | 10 | Drums | GM Kits | Xiao Only |
 | **Kneel**  | Neal Peart      | 10      | Drums                | Sample Kits   | Amy Only     |
 | **Dapht**  | Daft Punk       | 4       | General Samples      | TBD           | Amy Only     |
@@ -85,7 +86,7 @@ Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX
 ### NSMBL_Synth — SAM2695 (`SeeedXiaoMIDI/NSMBL_Synth/`)
 Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthrough, NRPN support for filter cutoff/resonance, envelope, and vibrato. BLE MIDI parser with running status support. Listens on **MIDI channel 1** (melody) and **channel 10** (GM drums); other channels are ignored (route in your host). See `Docs/SAM2695_MIDI_Reference.md` for full CC/NRPN map.
 
-Per-unit identities live in `SeeedXiaoMIDI/NSMBL_Synth/configs/` — copy one to `main/config.h` before flashing so each module shows up with its own BLE name in AUM: **NSMBL_Eenoo** (pads, ch1), **NSMBL_Prynz** (lead, ch2), **NSMBL_Botsee** (bass, ch3), **NSMBL_8OhAte** (drums, ch10).
+Per-unit identities live in `SeeedXiaoMIDI/NSMBL_Synth/configs/` — copy one to `main/config.h` before flashing so each module shows up with its own BLE name in AUM: **NSMBL_Eenoo** (pads, ch1), **NSMBL_Prynz** (lead, ch2), **NSMBL_Botsee** (bass, ch3), **NSMBL_Moroh** (arps, ch5), **NSMBL_8OhAte** (drums, ch10). Each unit listens only on its own channel.
 
 **Hardware buttons** (patch browsing, each press auditions the voice):
 

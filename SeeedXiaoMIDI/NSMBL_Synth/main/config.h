@@ -5,6 +5,7 @@
 //   cp configs/config_Eenoo.h  main/config.h   (pads,  ch1)
 //   cp configs/config_Prynz.h  main/config.h   (lead,  ch2)
 //   cp configs/config_Botsee.h main/config.h   (bass,  ch3)
+//   cp configs/config_Moroh.h  main/config.h   (arps,  ch5)
 //   cp configs/config_8OhAte.h main/config.h   (drums, ch10)
 #define DEVICE_NAME     "NSMBL_Synth"
 #define DEFAULT_PATCH   0

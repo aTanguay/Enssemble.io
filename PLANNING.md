@@ -4,7 +4,7 @@
 
 A set of wireless BLE MIDI synthesizer units deployed spatially around a room — each one a band member with its own voice, driven wirelessly from an iPhone. Sound comes from physically located objects rather than stereo speakers.
 
-Each unit is a band member with a single-name identity: Eenoo, Prynz, Botsee, 8OhAte, Kneel, Dapht, Garee.
+Each unit is a band member with a single-name identity: Eenoo, Prynz, Botsee, Moroh, 8OhAte, Kneel, Dapht, Garee.
 
 The firmware is built with **ESP-IDF** and targets two hardware platforms:
 - **XIAO MIDI Synthesizer** (ESP32-C3 + SAM2695 hardware GM chip)
@@ -55,6 +55,7 @@ AMY handles internally: CC 0 (bank select), CC 64 (sustain), CC 123 (all notes o
 | **Eenoo**  | Brian Eno       | 1       | Pads/Ambient         | Synth Pad     | Amy and Xiao | ✅ Ready     |            |
 | **Prynz**  | Prince          | 2       | Lead                 | Synth Leads   | Amy and Xiao | ✅ Ready     |            |
 | **Botsee** | Bootsie Collins | 3       | Bass                 | Synth Bass    | Amy and Xiao | ✅ Ready     |            |
+| **Moroh**  | Giorgio Moroder | 5       | Arps / Sequences     | Synth Lead    | Amy and Xiao | ✅ Ready     |            |
 | **8OhAte** | The 808         | 10      | Drums                | GM Kits       | Xiao Only    | ✅ Ready     |            |
 | **Kneel**  | Neal Peart      | 10      | Drums                | Sample Kits   | Amy Only     |             |            |
 | **Dapht**  | Daft Punk       | 4       | General Samples      | TBD           | Amy Only     |             |            |
@@ -80,6 +81,7 @@ iPhone (AUM + Helium / TouchOSC)
         +-- Channel 2 --> Prynz (Lead)
         +-- Channel 3 --> Botsee (Bass)
         +-- Channel 4 --> Dapht (Samples) [Amy]
+        +-- Channel 5 --> Moroh (Arps/Sequences)
         +-- Channel 10 -> 8OhAte (Drums, Xiao) / Kneel (Drums, Amy)
         +-- All chans -> Garee (MIDI out to hardware) [Amy]
                 |
