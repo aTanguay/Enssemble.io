@@ -29,7 +29,7 @@
 - [x] Pitch Bend passthrough (working since EEnoo launch)
 - [x] Per-unit MIDI channel filtering (configurable via config.h, 0=all)
 - [x] Mozaic control surface — patch browsing, sound shaping, sustain, panic
-- [x] Band member configs created: EEnoo (pads), Pryns (lead), Aufde (bass), Kneel (drums)
+- [x] Band member configs created: Eenoo (pads), Prynz (lead), Botsee (bass), Kneel (drums)
 - [x] Named configs in `AmyBoard/configs/` — copy to config.h before flashing
 
 ## Phase 2b — XIAO Platform (In Progress)
@@ -69,7 +69,7 @@
 - [ ] Parser SysEx handling consumes the 0xF7 terminator as a timestamp (harmless, not strictly correct)
 
 ### Next — MVP for Spatial Composition
-- [ ] Flash 3 AMYboards: EEnoo (ch1 pads), Pryns (ch2 lead), Aufde (ch3 bass)
+- [ ] Flash 3 AMYboards: Eenoo (ch1 pads), Prynz (ch2 lead), Botsee (ch3 bass)
 - [ ] Verify 3-unit simultaneous BLE connection from iPhone/AUM
 - [ ] Connect each unit to a speaker in a different location
 - [ ] First spatial composition test

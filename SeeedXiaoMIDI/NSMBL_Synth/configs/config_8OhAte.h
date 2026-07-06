@@ -1,27 +1,25 @@
 #pragma once
 
 // ============================================================
-//  RYNGO — Drums (Ringo Starr)
+//  8OHATE — Drums (The 808)
 //  Copy to main/config.h before building:
-//    cp configs/config_Ryngo.h main/config.h
+//    cp configs/config_8OhAte.h main/config.h
 //
-//  Same firmware, drum-focused identity: sequence drums on MIDI
-//  channel 10 (note = drum piece, Program Change = kit). The
-//  melodic voice on ch1 is still available if wanted.
+//  GM drums: sequence on MIDI channel 10 (note = drum piece,
+//  Program Change = kit). The melodic voice on ch1 is still
+//  available if wanted.
 // ============================================================
 
 // --- Band Member Identity ---
-#define DEVICE_NAME     "NSMBL_Ryngo"
+#define DEVICE_NAME     "NSMBL_8OhAte"
 #define DEFAULT_PATCH   0       // melodic ch1 default (drums live on ch10)
 #define DEFAULT_BANK    0
 
 // --- Channel behavior ---
-// The unit listens on exactly two MIDI channels and ignores all others, like a
-// normal hardware synth — you route in your host (AUM). Send melody to MIDI
-// channel 1 and GM drums to channel 10; anything else is dropped by the parser.
-// (Each unit is its own BLE destination, so every unit can use ch1 for melody.)
-#define VOICE_CHANNEL   0       // melodic voice (internal 0 = MIDI channel 1)
-#define DRUM_CHANNEL    9       // GM drums   (internal 9 = MIDI channel 10)
+// Listens on VOICE_CHANNEL (melody) + DRUM_CHANNEL (GM drums), ignores the rest.
+// 8OhAte is the drummer — the action is on MIDI ch10 (DRUM_CHANNEL).
+#define VOICE_CHANNEL   0       // melody on MIDI channel 1 (secondary)
+#define DRUM_CHANNEL    9       // GM drums on MIDI channel 10 (primary)
 
 // --- Hardware Pins (XIAO ESP32-C3) ---
 #define BUTTON_0_PIN    5

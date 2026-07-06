@@ -1,23 +1,21 @@
 #pragma once
 
 // ============================================================
-//  JAMI — Lead Synth (Jimi Hendrix)
+//  PRYNZ — Lead (Prince)
 //  Copy to main/config.h before building:
-//    cp configs/config_Jami.h main/config.h
+//    cp configs/config_Prynz.h main/config.h
 // ============================================================
 
 // --- Band Member Identity ---
-#define DEVICE_NAME     "NSMBL_Jami"
-#define DEFAULT_PATCH   81      // Lead 2 (sawtooth)
+#define DEVICE_NAME     "NSMBL_Prynz"
+#define DEFAULT_PATCH   81      // Lead 2 (sawtooth) — GM
 #define DEFAULT_BANK    0
 
 // --- Channel behavior ---
-// The unit listens on exactly two MIDI channels and ignores all others, like a
-// normal hardware synth — you route in your host (AUM). Send melody to MIDI
-// channel 1 and GM drums to channel 10; anything else is dropped by the parser.
-// (Each unit is its own BLE destination, so every unit can use ch1 for melody.)
-#define VOICE_CHANNEL   0       // melodic voice (internal 0 = MIDI channel 1)
-#define DRUM_CHANNEL    9       // GM drums   (internal 9 = MIDI channel 10)
+// Listens on VOICE_CHANNEL (melody) + DRUM_CHANNEL (GM drums), ignores the rest.
+// Roster channel for Prynz is MIDI ch2 -> VOICE_CHANNEL 1.
+#define VOICE_CHANNEL   1       // melody on MIDI channel 2
+#define DRUM_CHANNEL    9       // GM drums on MIDI channel 10
 
 // --- Hardware Pins (XIAO ESP32-C3) ---
 #define BUTTON_0_PIN    5

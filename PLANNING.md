@@ -4,7 +4,7 @@
 
 A set of wireless BLE MIDI synthesizer units deployed spatially around a room — each one a band member with its own voice, driven wirelessly from an iPhone. Sound comes from physically located objects rather than stereo speakers.
 
-Each unit is a band member with a single-name identity: EEnoo, Jami, Kneel, Mowss, Bowee, Ryngo.
+Each unit is a band member with a single-name identity: Eenoo, Prynz, Botsee, 8OhAte, Kneel, Dapht, Garee.
 
 The firmware is built with **ESP-IDF** and targets two hardware platforms:
 - **XIAO MIDI Synthesizer** (ESP32-C3 + SAM2695 hardware GM chip)
@@ -60,7 +60,8 @@ AMY handles internally: CC 0 (bank select), CC 64 (sustain), CC 123 (all notes o
 | **Dapht**  | Daft Punk       | 4       | General Samples      | TBD           | Amy Only     |             |            |
 | **Garee**  | Gary Numan      | ALL     | MIDI Out to Hardware | None          | Amy Only     |             |            |
 
-Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing each board.
+Named configs in `AmyBoard/configs/` (AMY) and `SeeedXiaoMIDI/NSMBL_Synth/configs/` (XIAO)
+— copy one to `main/config.h` before flashing each board.
 
 
 
@@ -75,12 +76,12 @@ iPhone (AUM + Helium / TouchOSC)
         | iOS confirmed: 13+ simultaneous connections possible
         | Latency: 3-15ms per unit
         |
-        +-- Channel 1 --> EEnoo (Keys)
-        +-- Channel 2 --> Jami (Lead) [planned]
-        +-- Channel 3 --> Kneel (Bass) [planned]
-        +-- Channel 4 --> Mowss (Pads) [planned]
-        +-- Channel 5 --> Bowee (Strings) [planned]
-        +-- Channel 10 -> Ryngo (Drums)
+        +-- Channel 1 --> Eenoo (Pads/Ambient)
+        +-- Channel 2 --> Prynz (Lead)
+        +-- Channel 3 --> Botsee (Bass)
+        +-- Channel 4 --> Dapht (Samples) [Amy]
+        +-- Channel 10 -> 8OhAte (Drums, Xiao) / Kneel (Drums, Amy)
+        +-- All chans -> Garee (MIDI out to hardware) [Amy]
                 |
                 v
 AMYboard (ESP32-S3, dual-core):

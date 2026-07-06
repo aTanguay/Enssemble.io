@@ -1,10 +1,10 @@
 #pragma once
 
-// --- Band Member: Pryns (Prince) ---
+// --- Band Member: Prynz (Prince) ---
 // Role: Lead
-// Firmware: NSMBL_EEnoo (AMY synth)
+// Firmware: NSMBL_Synth (AMY synth)
 
-#define DEVICE_NAME     "NSMBL_Pryns"
+#define DEVICE_NAME     "NSMBL_Prynz"
 #define MIDI_CHANNEL    2       // Dedicated channel for lead
 #define DEFAULT_PATCH   32      // Juno A51 Lead I
 

@@ -2,9 +2,10 @@
 
 // --- Band Member Identity ---
 // Copy a named config from AmyBoard/configs/ to customize:
-//   config_EEnoo.h  — Pads/Ambient (ch1, Juno Synth Pad)
-//   config_Pryns.h  — Lead (ch2, Juno Lead I)
-//   config_Aufde.h  — Bass (ch3, Juno Synth Bass I)
+//   config_Eenoo.h  — Pads/Ambient (ch1, Juno Synth Pad)
+//   config_Prynz.h  — Lead (ch2, Juno Lead I)
+//   config_Botsee.h — Bass (ch3, Juno Synth Bass I)
+//   config_Kneel.h  — Drums (ch10, sample kits)
 #define DEVICE_NAME     "NSMBL_Synth"
 #define MIDI_CHANNEL    0       // 0 = all channels, 1-16 = single channel filter
 #define DEFAULT_PATCH   0       // AMY patch number

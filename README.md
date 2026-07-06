@@ -77,7 +77,7 @@ Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing
 ## Firmware Variants
 
 ### NSMBL_Synth — AMY Synth (`AmyBoard/NSMBL_Synth/`)
-Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX7 (ch2), GM drums (ch10). Supports program change to browse all 256 patches. Custom NSMBL CC handler for real-time sound shaping. Used by EEnoo, Pryns, and Aufde.
+Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX7 (ch2), GM drums (ch10). Supports program change to browse all 256 patches. Custom NSMBL CC handler for real-time sound shaping. Used by Eenoo, Prynz, and Botsee.
 
 ### NSMBL_SampleKits — Sample Player (`AmyBoard/NSMBL_SampleKits/`)
 16-slice drum sample player. Reads WAV files with cue point markers from SD card. 4-voice polyphony, velocity-sensitive, chromatic mapping from C2. Used by Kneel.
@@ -85,7 +85,7 @@ Full software synthesizer using the AMY engine. Default synths: Juno-6 (ch1), DX
 ### NSMBL_Synth — SAM2695 (`SeeedXiaoMIDI/NSMBL_Synth/`)
 Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthrough, NRPN support for filter cutoff/resonance, envelope, and vibrato. BLE MIDI parser with running status support. Listens on **MIDI channel 1** (melody) and **channel 10** (GM drums); other channels are ignored (route in your host). See `Docs/SAM2695_MIDI_Reference.md` for full CC/NRPN map.
 
-Per-unit identities live in `SeeedXiaoMIDI/NSMBL_Synth/configs/` — copy one to `main/config.h` before flashing so each module shows up with its own BLE name in AUM: **NSMBL_Jami** (lead, saw lead default), **NSMBL_Bowee** (strings default), **NSMBL_Ryngo** (drums — sequence ch10).
+Per-unit identities live in `SeeedXiaoMIDI/NSMBL_Synth/configs/` — copy one to `main/config.h` before flashing so each module shows up with its own BLE name in AUM: **NSMBL_Eenoo** (pads, ch1), **NSMBL_Prynz** (lead, ch2), **NSMBL_Botsee** (bass, ch3), **NSMBL_8OhAte** (drums, ch10).
 
 **Hardware buttons** (patch browsing, each press auditions the voice):
 
@@ -115,7 +115,7 @@ Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/g
 source ~/esp/esp-idf/export.sh
 
 # Copy band member config, then build and flash
-cp AmyBoard/configs/config_Pryns.h AmyBoard/NSMBL_Synth/main/config.h
+cp AmyBoard/configs/config_Prynz.h AmyBoard/NSMBL_Synth/main/config.h
 cd AmyBoard/NSMBL_Synth
 idf.py build
 idf.py -p /dev/cu.usbmodem* flash monitor

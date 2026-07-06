@@ -1,12 +1,12 @@
 #pragma once
 
-// --- Band Member: Aufde (Melissa Auf der Maur) ---
-// Role: Bass
-// Firmware: NSMBL_EEnoo (AMY synth)
+// --- Band Member: Eenoo (Brian Eno) ---
+// Role: Pads / Ambient
+// Firmware: NSMBL_Synth (AMY synth)
 
-#define DEVICE_NAME     "NSMBL_Aufde"
-#define MIDI_CHANNEL    3       // Dedicated channel for bass
-#define DEFAULT_PATCH   31      // Juno A48 Synth Bass I
+#define DEVICE_NAME     "NSMBL_Eenoo"
+#define MIDI_CHANNEL    1       // Dedicated channel for pads
+#define DEFAULT_PATCH   47      // Juno A68 Synth Pad
 
 // --- Core Assignment ---
 #define BLE_CORE        0

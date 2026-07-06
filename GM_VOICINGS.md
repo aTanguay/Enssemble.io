@@ -215,7 +215,7 @@ and unique atmospheric pads not in the GM set.
 
 ## Suggested Presets Per Band Role
 
-### 🎸 EEnoo — Keys / Piano
+### 🎹 Keys / Piano *(spare voicings — no dedicated member in the current roster)*
 ```
 PC 0   Acoustic Grand Piano   ← default
 PC 4   Electric Piano 1
@@ -227,7 +227,7 @@ PC 19  Church Organ
 PC 88  Pad 1 Fantasia
 ```
 
-### ⚡ Jami — Lead Synth
+### ⚡ Prynz — Lead Synth
 ```
 PC 80  Lead 1 Square          ← default
 PC 81  Lead 2 Sawtooth
@@ -239,7 +239,7 @@ PC 64  Soprano Sax
 PC 73  Flute
 ```
 
-### 🎸 Kneel — Bass
+### 🎸 Botsee — Bass
 ```
 PC 32  Acoustic Bass          ← default
 PC 33  Finger Bass
@@ -251,7 +251,7 @@ PC 43  Contrabass
 PC 34  Pick Bass
 ```
 
-### 🌊 Mowss — Pads / Atmosphere
+### 🌊 Eenoo — Pads / Atmosphere
 ```
 PC 88  Pad 1 Fantasia         ← default
 PC 89  Pad 2 Warm
@@ -263,7 +263,7 @@ PC 99  FX 4 Atmosphere
 PC 102 FX 7 Echoes
 ```
 
-### 🎻 Bowee — Strings / Ensemble
+### 🎻 Strings / Ensemble *(spare voicings — no dedicated member in the current roster)*
 ```
 PC 48  String Ensemble 1      ← default
 PC 49  String Ensemble 2

@@ -1,10 +1,11 @@
 #pragma once
 
 // --- Band Member Identity ---
-// Copy a named config from ../configs/ before building, e.g.:
-//   cp configs/config_Jami.h main/config.h    (lead synth)
-//   cp configs/config_Bowee.h main/config.h   (strings synth)
-//   cp configs/config_Ryngo.h main/config.h   (drums)
+// Copy a named config from configs/ before building, e.g.:
+//   cp configs/config_Eenoo.h  main/config.h   (pads,  ch1)
+//   cp configs/config_Prynz.h  main/config.h   (lead,  ch2)
+//   cp configs/config_Botsee.h main/config.h   (bass,  ch3)
+//   cp configs/config_8OhAte.h main/config.h   (drums, ch10)
 #define DEVICE_NAME     "NSMBL_Synth"
 #define DEFAULT_PATCH   0
 #define DEFAULT_BANK    0

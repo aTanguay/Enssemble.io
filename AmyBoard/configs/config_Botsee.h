@@ -1,12 +1,12 @@
 #pragma once
 
-// --- Band Member: EEnoo (Brian Eno) ---
-// Role: Pads / Ambient
-// Firmware: NSMBL_EEnoo (AMY synth)
+// --- Band Member: Botsee (Bootsie Collins) ---
+// Role: Bass
+// Firmware: NSMBL_Synth (AMY synth)
 
-#define DEVICE_NAME     "NSMBL_EEnoo"
-#define MIDI_CHANNEL    1       // Dedicated channel for pads
-#define DEFAULT_PATCH   47      // Juno A68 Synth Pad
+#define DEVICE_NAME     "NSMBL_Botsee"
+#define MIDI_CHANNEL    3       // Dedicated channel for bass
+#define DEFAULT_PATCH   31      // Juno A48 Synth Bass I
 
 // --- Core Assignment ---
 #define BLE_CORE        0

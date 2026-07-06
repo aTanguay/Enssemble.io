@@ -1,23 +1,21 @@
 #pragma once
 
 // ============================================================
-//  BOWEE — Strings / Ambient Synth (David Bowie)
+//  EENOO — Pads / Ambient (Brian Eno)
 //  Copy to main/config.h before building:
-//    cp configs/config_Bowee.h main/config.h
+//    cp configs/config_Eenoo.h main/config.h
 // ============================================================
 
 // --- Band Member Identity ---
-#define DEVICE_NAME     "NSMBL_Bowee"
-#define DEFAULT_PATCH   48      // String Ensemble 1
+#define DEVICE_NAME     "NSMBL_Eenoo"
+#define DEFAULT_PATCH   89      // Pad 2 (Warm) — GM
 #define DEFAULT_BANK    0
 
 // --- Channel behavior ---
-// The unit listens on exactly two MIDI channels and ignores all others, like a
-// normal hardware synth — you route in your host (AUM). Send melody to MIDI
-// channel 1 and GM drums to channel 10; anything else is dropped by the parser.
-// (Each unit is its own BLE destination, so every unit can use ch1 for melody.)
-#define VOICE_CHANNEL   0       // melodic voice (internal 0 = MIDI channel 1)
-#define DRUM_CHANNEL    9       // GM drums   (internal 9 = MIDI channel 10)
+// Listens on VOICE_CHANNEL (melody) + DRUM_CHANNEL (GM drums), ignores the rest.
+// Roster channel for Eenoo is MIDI ch1 -> VOICE_CHANNEL 0.
+#define VOICE_CHANNEL   0       // melody on MIDI channel 1
+#define DRUM_CHANNEL    9       // GM drums on MIDI channel 10
 
 // --- Hardware Pins (XIAO ESP32-C3) ---
 #define BUTTON_0_PIN    5
