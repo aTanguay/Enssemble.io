@@ -88,6 +88,11 @@ Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthroug
 
 Per-unit identities live in `SeeedXiaoMIDI/NSMBL_Synth/configs/` — copy one to `main/config.h` before flashing so each module shows up with its own BLE name in AUM: **NSMBL_Eenoo** (pads, ch1), **NSMBL_Prynz** (lead, ch2), **NSMBL_Botsee** (bass, ch3), **NSMBL_Moroh** (arps, ch5), **NSMBL_8OhAte** (drums, ch10). Each unit listens only on its own channel.
 
+Prebuilt per-member BINs are attached to the [v0.1.0 release](https://github.com/aTanguay/Enssemble.io/releases/tag/v0.1.0) — flash a unit without a toolchain:
+```bash
+esptool.py --chip esp32c3 -p /dev/cu.usbmodem101 -b 460800 write_flash 0x0 NSMBL_Eenoo_v0.1.bin
+```
+
 **Hardware buttons** (patch browsing, each press auditions the voice):
 
 | Button | Tap | Hold |

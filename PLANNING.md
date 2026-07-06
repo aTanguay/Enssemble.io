@@ -14,7 +14,11 @@ The firmware is built with **ESP-IDF** and targets two hardware platforms:
 
 ## Current Status
 
-ESP-IDF firmware working on both AMYboard and XIAO platforms. Three AMYboards available for spatial deployment. XIAO+SAM2695 firmware verified with hardware GM wavetable synth. Mozaic iOS control surface replaces planned TouchOSC phase. Approaching MVP for first spatial composition.
+ESP-IDF firmware working on both AMYboard and XIAO platforms.
+
+**XIAO platform shipped as v0.1.0** — a 5-piece XIAO band (Eenoo, Prynz, Botsee, Moroh, 8OhAte), each a single-channel BLE MIDI voice with per-member prebuilt BINs attached to the [GitHub release](https://github.com/aTanguay/Enssemble.io/releases/tag/v0.1.0). The long SAM2695 "patch won't change" bug is solved (root cause: ESP-IDF console was on UART0, the SAM's MIDI port). Three XIAO units flashed so far (Prynz, Botsee, 8OhAte); Eenoo + Moroh pending hardware.
+
+Three AMYboards available for spatial deployment. Mozaic iOS control surface replaces the planned TouchOSC phase. Next: flash the remaining units and run the first multi-unit spatial jam.
 
 ### Firmware Variants
 | Firmware | Directory | Platform | Purpose | Status |
@@ -23,7 +27,9 @@ ESP-IDF firmware working on both AMYboard and XIAO platforms. Three AMYboards av
 | NSMBL_SampleKits | `AmyBoard/NSMBL_SampleKits/` | AMYboard (ESP32-S3) | 16-slice WAV sample player (SD card) | ✅ Verified |
 | NSMBL_Synth | `SeeedXiaoMIDI/NSMBL_Synth/` | XIAO (ESP32-C3) | SAM2695 hardware GM wavetable synth | ✅ Verified |
 
-Band member identity is set via `config.h` — copy from `AmyBoard/configs/` before building.
+Band member identity is set via `config.h` — copy a named config from `AmyBoard/configs/`
+(AMY) or `SeeedXiaoMIDI/NSMBL_Synth/configs/` (XIAO) before building. XIAO members are
+single-channel: Eenoo ch1, Prynz ch2, Botsee ch3, Moroh ch5, 8OhAte ch10.
 
 ### iOS Control Surface (Mozaic)
 | Script | Purpose | Status |
@@ -46,7 +52,7 @@ Band member identity is set via `config.h` — copy from `AmyBoard/configs/` bef
 AMY handles internally: CC 0 (bank select), CC 64 (sustain), CC 123 (all notes off).
 
 ### The Band — Full Roster
-*Names riff on famous musicians. Configs in `AmyBoard/configs/`.*
+*Names riff on famous musicians. Configs in `AmyBoard/configs/` (AMY) and `SeeedXiaoMIDI/NSMBL_Synth/configs/` (XIAO).*
 
 
 
@@ -233,6 +239,19 @@ full debugging session. Guard rails:
 ---
 
 ## Session Log
+
+### 2026-07-06 — XIAO band shipped: v0.1.0, 5 single-channel members
+- **Cut the v0.1.0 GitHub release** with a merged, flash-at-0x0 BIN (no toolchain needed).
+- **Synced the whole roster naming** across docs + configs: Eenoo, Prynz, Botsee
+  (Bootsie Collins), Moroh (Giorgio Moroder), 8OhAte, Kneel, Dapht, Garee. Renamed
+  AMY + XIAO configs to match.
+- **Made each XIAO unit single-channel** so it responds only to its own port (synths on
+  ch1/2/3/5 via DRUM_CHANNEL disabled; 8OhAte on ch10 = GM drums). Boot flourish is now
+  conditional: drummers play the beat, synths play a hello note in their own voice.
+- **Built per-member BINs** (Eenoo/Prynz/Botsee/Moroh/8OhAte) and attached them to the
+  release. Flashed 3 units live: Prynz, Botsee, 8OhAte (hearing real drums!).
+- Review pass on the XIAO firmware: fixed panic to release sustain (CC64=0), tidied stale
+  comments; deferred items logged (audition blocking the MIDI task needs a UART mutex first).
 
 ### 2026-07-02 — XIAO patch-nav MVP + the UART0/console bug
 - **Root-caused the "patch never changes / stuck bell" bug**: the ESP-IDF debug

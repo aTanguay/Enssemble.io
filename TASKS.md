@@ -50,6 +50,13 @@
   SAM's MIDI; moved console to USB-JTAG (`CONFIG_ESP_CONSOLE_UART_NUM=-1`). GM System On at boot.
 - [x] Channel model — listen on ch1 (melody) + ch10 (drums), ignore the rest
 - [x] **Patch-nav MVP** — buttons 0/1 family jump (coarse), 2/3 single patch (fine), each auditions
+- [x] Review-pass cleanup — panic releases sustain (CC64=0), stale comments fixed
+- [x] **v0.1.0 GitHub release** — merged flash-at-0x0 BIN, no toolchain needed
+- [x] Roster naming sync across docs + AMY/XIAO configs
+- [x] **5 single-channel XIAO band variants** — each listens only on its own port:
+  Eenoo (ch1), Prynz (ch2), Botsee (ch3), Moroh (ch5), 8OhAte (ch10); per-member
+  prebuilt BINs built and attached to the v0.1.0 release
+- [x] Flashed live: Prynz, Botsee, 8OhAte (drums confirmed!)
 
 ### Deferred — XIAO firmware hygiene (low priority, not blocking)
 - [ ] **Audition blocks the MIDI task (~780ms)** — `audition_voice()` + PC delays run inside
@@ -69,16 +76,21 @@
 - [ ] Parser SysEx handling consumes the 0xF7 terminator as a timestamp (harmless, not strictly correct)
 
 ### Next — MVP for Spatial Composition
-- [ ] Flash 3 AMYboards: Eenoo (ch1 pads), Prynz (ch2 lead), Botsee (ch3 bass)
-- [ ] Verify 3-unit simultaneous BLE connection from iPhone/AUM
+- [ ] Flash remaining XIAO units: Eenoo (ch1, from the basement) + Moroh (ch5)
+- [ ] Verify 5-unit simultaneous BLE connection from iPhone/AUM (route ch1/2/3/5 + ch10)
 - [ ] Connect each unit to a speaker in a different location
-- [ ] First spatial composition test
+- [ ] First spatial composition test (2 XIAO + 1 AMY already sounded amazing)
+- [ ] Flash 3 AMYboards: Eenoo (ch1 pads), Prynz (ch2 lead), Botsee (ch3 bass)
 - [ ] Verify XIAO Mozaic controller end-to-end (CCs, NRPNs, program changes)
 
 ### Later
 - [ ] Kit switching via MIDI Program Change (SmplCty)
 - [ ] Modulino Buttons + Knob I2C drivers (when hardware arrives)
-- [ ] BLE-to-DIN MIDI bridge mode (forward BLE MIDI out GPIO 14/15)
+- [ ] **Garee (Gary Numan)** — AMYboard MIDI-out-to-hardware variant: BLE MIDI in →
+  DIN MIDI out (GPIO 14/15), so the wireless rig can drive real hardware synths
+- [ ] **CV output AMYboard variant** — pitch/gate (and LFO/env) CV out to patch a band
+  member into modular/Eurorack; AMYboard has 2x CV out
+- [ ] Moroh AMY config (roster lists Moroh as Amy+Xiao; only the XIAO config exists so far)
 - [ ] Favorite voice slots stored in NVS flash
 - [ ] Reconnection handling — auto re-advertise after iOS disconnects
 - [ ] Per-unit Mozaic scripts (one controller per band member)
