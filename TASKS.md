@@ -96,7 +96,7 @@
     current source** — the OUT jack has no 3.3V rail, so a DIN opto gets total
     silence otherwise. Full write-up in `AmyBoard/NSMBL_Bridge/README.md`.
   - [ ] (future) MIDI thru/merge from DIN in (GPIO21); SysEx/clock passthrough
-  - [ ] (cleanup) reflash the clean build — per-note diagnostic log now removed
+  - [x] (cleanup) reflashed the clean build — per-note diagnostic log removed (2026-07-07)
 - [ ] **CV output AMYboard variant** — pitch/gate (and LFO/env) CV out to patch a band
   member into modular/Eurorack; AMYboard has 2x CV out
 - [ ] Moroh AMY config (roster lists Moroh as Amy+Xiao; only the XIAO config exists so far)
