@@ -26,7 +26,7 @@ Three AMYboards available for spatial deployment. Mozaic iOS control surface rep
 | NSMBL_Synth | `AmyBoard/NSMBL_Synth/` | AMYboard (ESP32-S3) | AMY synth engine (Juno, DX7, drums) | ✅ Verified |
 | NSMBL_SampleKits | `AmyBoard/NSMBL_SampleKits/` | AMYboard (ESP32-S3) | 16-slice WAV sample player (SD card) | ✅ Verified |
 | NSMBL_Synth | `SeeedXiaoMIDI/NSMBL_Synth/` | XIAO (ESP32-C3) | SAM2695 hardware GM wavetable synth | ✅ Verified |
-| NSMBL_Bridge | `AmyBoard/NSMBL_Bridge/` | AMYboard (ESP32-S3) | BLE→DIN MIDI bridge (Garee); channel filter/remap | 🛠️ Builds, untested on HW |
+| NSMBL_Bridge | `AmyBoard/NSMBL_Bridge/` | AMYboard (ESP32-S3) | BLE→DIN MIDI bridge (Garee); channel filter/remap | ✅ HW-verified (drives Akai MPC) |
 
 Band member identity is set via `config.h` — copy a named config from `AmyBoard/configs/`
 (AMY) or `SeeedXiaoMIDI/NSMBL_Synth/configs/` (XIAO) before building. XIAO members are
@@ -240,6 +240,23 @@ full debugging session. Guard rails:
 ---
 
 ## Session Log
+
+### 2026-07-07 — Garee bridge live: BLE → DIN MIDI drives real hardware
+- **Scaffolded `AmyBoard/NSMBL_Bridge/` (Garee)** — a pure BLE→DIN MIDI forwarder
+  (no AMY engine). Reuses the XIAO BLE parser; new `midi_out.c` re-serializes to
+  UART1. Configurable `BRIDGE_IN`/`BRIDGE_OUT`; default = forward ALL, remap to ch1.
+  Console on USB-Serial-JTAG (off the MIDI UART).
+- **Solved a hard, non-obvious hardware bug: no MIDI reached the Akai MPC.** The
+  firmware was transmitting fine on GPIO14 (confirmed via per-note logs), and the
+  MPC/cable were proven good — yet silence on both Type-A and Type-B adapters.
+- **Root cause (from the v1.4 schematic in `Docs/Amyboard/tulipcc-main`):** the OUT
+  jack is TRS `tip=GPIO14 (data), ring=GPIO15, sleeve=GND` with **no 3.3V rail**.
+  A DIN MIDI opto needs a current source, which on this board must be **firmware
+  holding the non-data leg (GPIO15) HIGH**. We only drove GPIO14 → opto never
+  conducted. Fix matches stock `amyboard_set_midi_out()`:
+  `gpio_set_direction(15,OUTPUT); gpio_set_level(15,1);`. Type A = TX14/SRC15,
+  Type B = TX15/SRC14. **Verified live driving the MPC.** Full write-up in the
+  bridge README + memory `reference-amyboard-midi-trs`.
 
 ### 2026-07-06 — XIAO band shipped: v0.1.0, 5 single-channel members
 - **Cut the v0.1.0 GitHub release** with a merged, flash-at-0x0 BIN (no toolchain needed).

@@ -2,6 +2,7 @@
 #include "config.h"
 
 #include "driver/uart.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
 
 static const char *TAG = "midi_out";
@@ -26,8 +27,16 @@ void midi_out_init(void)
                                  UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     ESP_ERROR_CHECK(uart_driver_install(MIDI_UART_NUM, 256, 256, 0, NULL, 0));
 
-    ESP_LOGI(TAG, "DIN MIDI out: UART%d TX=GPIO%d @ %d baud",
-             MIDI_UART_NUM, MIDI_TX_PIN, MIDI_BAUD);
+    // The AMYboard OUT jack is TRS tip=GPIO14, ring=GPIO15, sleeve=GND with no
+    // fixed 3.3V rail. A DIN MIDI input's optocoupler needs a current source, so
+    // the non-data leg must be held HIGH (MIDI idle/source) or nothing conducts.
+    // (Matches stock tulipcc amyboard_set_midi_out().)
+    gpio_reset_pin(MIDI_SRC_PIN);
+    gpio_set_direction(MIDI_SRC_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(MIDI_SRC_PIN, 1);
+
+    ESP_LOGI(TAG, "DIN MIDI out: UART%d TX=GPIO%d (src leg GPIO%d high) @ %d baud",
+             MIDI_UART_NUM, MIDI_TX_PIN, MIDI_SRC_PIN, MIDI_BAUD);
 }
 
 void midi_out_send_event(const midi_event_t *event, uint8_t channel)
