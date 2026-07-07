@@ -16,6 +16,9 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 # Logging
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 
-# NOTE: DIN MIDI is on UART1 (GPIO14/21). The default console is UART0 — a
-# DIFFERENT UART — so, unlike the XIAO/SAM2695, the console does not corrupt the
-# MIDI line here. No console override needed.
+# Console on the S3's native USB (USB-Serial-JTAG) so logs are visible over the
+# same USB-C used to flash. DIN MIDI is on UART1 (GPIO14/21) — a different
+# peripheral entirely — so there is no console/MIDI collision here.
+CONFIG_ESP_CONSOLE_UART_DEFAULT=n
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
