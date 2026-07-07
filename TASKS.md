@@ -86,8 +86,13 @@
 ### Later
 - [ ] Kit switching via MIDI Program Change (SmplCty)
 - [ ] Modulino Buttons + Knob I2C drivers (when hardware arrives)
-- [ ] **Garee (Gary Numan)** — AMYboard MIDI-out-to-hardware variant: BLE MIDI in →
-  DIN MIDI out (GPIO 14/15), so the wireless rig can drive real hardware synths
+- [x] **Garee (Gary Numan)** — AMYboard BLE→DIN MIDI bridge scaffolded
+  (`AmyBoard/NSMBL_Bridge/`), builds clean for ESP32-S3. MIDI out UART1 GPIO14
+  (Type A), 31250. Configurable `BRIDGE_IN` (all/one channel) + `BRIDGE_OUT`
+  (passthrough/remap); default config_Garee.h forwards ALL → remaps to ch1 so
+  fixed-channel hardware just plays.
+  - [ ] Flash to an AMYboard + test driving real hardware over DIN
+  - [ ] (future) MIDI thru/merge from DIN in (GPIO21); SysEx/clock passthrough
 - [ ] **CV output AMYboard variant** — pitch/gate (and LFO/env) CV out to patch a band
   member into modular/Eurorack; AMYboard has 2x CV out
 - [ ] Moroh AMY config (roster lists Moroh as Amy+Xiao; only the XIAO config exists so far)

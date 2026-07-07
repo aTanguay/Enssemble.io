@@ -1,0 +1,4 @@
+# ESP-IDF build output + generated config
+build/
+sdkconfig
+sdkconfig.old

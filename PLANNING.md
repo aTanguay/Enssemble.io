@@ -26,6 +26,7 @@ Three AMYboards available for spatial deployment. Mozaic iOS control surface rep
 | NSMBL_Synth | `AmyBoard/NSMBL_Synth/` | AMYboard (ESP32-S3) | AMY synth engine (Juno, DX7, drums) | ✅ Verified |
 | NSMBL_SampleKits | `AmyBoard/NSMBL_SampleKits/` | AMYboard (ESP32-S3) | 16-slice WAV sample player (SD card) | ✅ Verified |
 | NSMBL_Synth | `SeeedXiaoMIDI/NSMBL_Synth/` | XIAO (ESP32-C3) | SAM2695 hardware GM wavetable synth | ✅ Verified |
+| NSMBL_Bridge | `AmyBoard/NSMBL_Bridge/` | AMYboard (ESP32-S3) | BLE→DIN MIDI bridge (Garee); channel filter/remap | 🛠️ Builds, untested on HW |
 
 Band member identity is set via `config.h` — copy a named config from `AmyBoard/configs/`
 (AMY) or `SeeedXiaoMIDI/NSMBL_Synth/configs/` (XIAO) before building. XIAO members are
