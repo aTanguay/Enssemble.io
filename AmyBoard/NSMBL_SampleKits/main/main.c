@@ -3,6 +3,8 @@
 #include "synth_engine.h"
 #include "sd_card.h"
 #include "sample_player.h"
+#include "i2c_bus.h"
+#include "ui.h"
 
 #include "esp_log.h"
 #include "nvs_flash.h"
@@ -26,6 +28,12 @@ void app_main(void)
     ESP_ERROR_CHECK(sd_card_init());
     ESP_ERROR_CHECK(sample_player_init());
     ESP_ERROR_CHECK(sample_player_load_kit(KIT_PATH));
+
+    // Local UI (I2C encoder + OLED). Non-fatal: if the bus or devices are
+    // absent, the board keeps working as a plain BLE sample player.
+    if (i2c_bus_init() == ESP_OK) {
+        ui_init(i2c_bus_get());
+    }
 
     // Start MIDI pipeline
     QueueHandle_t midi_queue = xQueueCreate(MIDI_QUEUE_SIZE, sizeof(midi_event_t));

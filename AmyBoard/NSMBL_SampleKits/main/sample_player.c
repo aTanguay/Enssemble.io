@@ -6,6 +6,7 @@
 #include "driver/i2s_std.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -38,6 +39,12 @@ static kit_t s_kit;
 static voice_t s_voices[MAX_VOICES];
 static i2s_chan_handle_t s_i2s_handle;
 
+// Guards the live kit buffer (s_kit.data / slices) against the render task while
+// sample_player_load_kit() swaps in a new kit. Held only for the microsecond swap
+// and for each render mix pass — never during the slow SD read.
+static SemaphoreHandle_t s_kit_mutex;
+static char s_kit_name[64];
+
 static uint32_t read_u32_le(const uint8_t *p)
 {
     return p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
@@ -48,7 +55,7 @@ static uint16_t read_u16_le(const uint8_t *p)
     return p[0] | (p[1] << 8);
 }
 
-static esp_err_t parse_wav_header(FILE *f, uint32_t *data_offset, uint32_t *data_size)
+static esp_err_t parse_wav_header(FILE *f, kit_t *k, uint32_t *data_offset, uint32_t *data_size)
 {
     uint8_t header[12];
     fread(header, 1, 12, f);
@@ -70,11 +77,11 @@ static esp_err_t parse_wav_header(FILE *f, uint32_t *data_offset, uint32_t *data
         if (memcmp(chunk_id, "fmt ", 4) == 0) {
             uint8_t fmt[16];
             fread(fmt, 1, 16, f);
-            s_kit.channels = read_u16_le(fmt + 2);
-            s_kit.sample_rate = read_u32_le(fmt + 4);
-            s_kit.bits_per_sample = read_u16_le(fmt + 14);
+            k->channels = read_u16_le(fmt + 2);
+            k->sample_rate = read_u32_le(fmt + 4);
+            k->bits_per_sample = read_u16_le(fmt + 14);
             ESP_LOGI(TAG, "Format: %d ch, %lu Hz, %d bit",
-                     s_kit.channels, s_kit.sample_rate, s_kit.bits_per_sample);
+                     k->channels, k->sample_rate, k->bits_per_sample);
             if (chunk_size > 16) fseek(f, chunk_size - 16, SEEK_CUR);
 
         } else if (memcmp(chunk_id, "data", 4) == 0) {
@@ -87,17 +94,17 @@ static esp_err_t parse_wav_header(FILE *f, uint32_t *data_offset, uint32_t *data
             fread(cue_data, 1, chunk_size, f);
 
             uint32_t num_cues = read_u32_le(cue_data);
-            s_kit.num_slices = (num_cues > MAX_SLICES) ? MAX_SLICES : num_cues;
+            k->num_slices = (num_cues > MAX_SLICES) ? MAX_SLICES : num_cues;
 
-            uint32_t bytes_per_sample = (s_kit.bits_per_sample / 8) * s_kit.channels;
+            uint32_t bytes_per_sample = (k->bits_per_sample / 8) * k->channels;
 
-            for (int i = 0; i < s_kit.num_slices; i++) {
+            for (int i = 0; i < k->num_slices; i++) {
                 uint32_t sample_offset = read_u32_le(cue_data + 4 + i * 24 + 20);
-                s_kit.slices[i].start = sample_offset * bytes_per_sample;
+                k->slices[i].start = sample_offset * bytes_per_sample;
             }
             free(cue_data);
 
-            ESP_LOGI(TAG, "Found %d cue points", s_kit.num_slices);
+            ESP_LOGI(TAG, "Found %d cue points", k->num_slices);
 
         } else {
             fseek(f, chunk_size, SEEK_CUR);
@@ -110,23 +117,36 @@ static esp_err_t parse_wav_header(FILE *f, uint32_t *data_offset, uint32_t *data
     return ESP_OK;
 }
 
-static void compute_slice_lengths(uint32_t total_data_size)
+static void compute_slice_lengths(kit_t *k, uint32_t total_data_size)
 {
-    for (int i = 0; i < s_kit.num_slices; i++) {
-        if (i + 1 < s_kit.num_slices) {
-            s_kit.slices[i].length = s_kit.slices[i + 1].start - s_kit.slices[i].start;
+    for (int i = 0; i < k->num_slices; i++) {
+        if (i + 1 < k->num_slices) {
+            k->slices[i].length = k->slices[i + 1].start - k->slices[i].start;
         } else {
-            s_kit.slices[i].length = total_data_size - s_kit.slices[i].start;
+            k->slices[i].length = total_data_size - k->slices[i].start;
         }
         ESP_LOGI(TAG, "Slice %d: offset %lu, length %lu (%.3fs)",
-                 i + 1, s_kit.slices[i].start, s_kit.slices[i].length,
-                 (float)s_kit.slices[i].length / (s_kit.sample_rate * s_kit.channels * (s_kit.bits_per_sample / 8)));
+                 i + 1, k->slices[i].start, k->slices[i].length,
+                 (float)k->slices[i].length / (k->sample_rate * k->channels * (k->bits_per_sample / 8)));
     }
+}
+
+// basename without directory or extension, into s_kit_name.
+static void set_kit_name(const char *path)
+{
+    const char *base = strrchr(path, '/');
+    base = base ? base + 1 : path;
+    strlcpy(s_kit_name, base, sizeof(s_kit_name));
+    char *dot = strrchr(s_kit_name, '.');
+    if (dot) *dot = '\0';
 }
 
 esp_err_t sample_player_load_kit(const char *path)
 {
     ESP_LOGI(TAG, "Loading kit: %s", path);
+
+    // --- Load fully into a local kit; the live kit keeps playing meanwhile ---
+    kit_t nk = {0};
 
     FILE *f = fopen(path, "rb");
     if (!f) {
@@ -135,35 +155,57 @@ esp_err_t sample_player_load_kit(const char *path)
     }
 
     uint32_t data_offset = 0, data_size = 0;
-    esp_err_t ret = parse_wav_header(f, &data_offset, &data_size);
+    esp_err_t ret = parse_wav_header(f, &nk, &data_offset, &data_size);
     if (ret != ESP_OK) {
         fclose(f);
         return ret;
     }
 
-    compute_slice_lengths(data_size);
+    compute_slice_lengths(&nk, data_size);
 
-    // Load audio data into PSRAM
-    s_kit.data = heap_caps_malloc(data_size, MALLOC_CAP_SPIRAM);
-    if (!s_kit.data) {
-        ESP_LOGE(TAG, "Failed to allocate %lu bytes in PSRAM", data_size);
+    nk.data = heap_caps_malloc(data_size, MALLOC_CAP_SPIRAM);
+    if (!nk.data) {
+        ESP_LOGE(TAG, "Failed to allocate %lu bytes in PSRAM", (unsigned long)data_size);
         fclose(f);
         return ESP_ERR_NO_MEM;
     }
 
     fseek(f, data_offset, SEEK_SET);
-    size_t read = fread(s_kit.data, 1, data_size, f);
-    s_kit.data_size = read;
+    nk.data_size = fread(nk.data, 1, data_size, f);
     fclose(f);
 
-    ESP_LOGI(TAG, "Kit loaded: %lu bytes in PSRAM", (unsigned long)read);
+    // --- Atomic swap: silence voices, drop the old buffer, install the new ---
+    int16_t *old_data = NULL;
+    xSemaphoreTake(s_kit_mutex, portMAX_DELAY);
+    for (int v = 0; v < MAX_VOICES; v++) s_voices[v].active = 0;
+    old_data = s_kit.data;
+    s_kit = nk;
+    xSemaphoreGive(s_kit_mutex);
+
+    if (old_data) heap_caps_free(old_data); // free the previous kit (fixes reload leak)
+    set_kit_name(path);
+
+    ESP_LOGI(TAG, "Kit loaded: %lu bytes in PSRAM (%s)", (unsigned long)nk.data_size, s_kit_name);
     return ESP_OK;
+}
+
+const char *sample_player_current_kit(void)
+{
+    return s_kit_name;
 }
 
 void sample_player_note_on(uint8_t note, uint8_t velocity)
 {
     int slice_idx = note - BASE_NOTE;
-    if (slice_idx < 0 || slice_idx >= s_kit.num_slices) return;
+
+    // Share the kit mutex with the render/swap path so we never read a kit that
+    // is mid-swap or index into slices that are being replaced.
+    xSemaphoreTake(s_kit_mutex, portMAX_DELAY);
+
+    if (s_kit.data == NULL || slice_idx < 0 || slice_idx >= s_kit.num_slices) {
+        xSemaphoreGive(s_kit_mutex);
+        return;
+    }
 
     // Find a free voice, or steal the oldest
     int oldest = 0;
@@ -184,6 +226,8 @@ void sample_player_note_on(uint8_t note, uint8_t velocity)
     s_voices[oldest].pos = 0;
     s_voices[oldest].velocity = velocity;
 
+    xSemaphoreGive(s_kit_mutex);
+
     ESP_LOGD(TAG, "Voice %d -> slice %d (note %d, vel %d)", oldest, slice_idx, note, velocity);
 }
 
@@ -203,31 +247,38 @@ static void i2s_render_task(void *param)
     while (1) {
         memset(mix_buf, 0, buf_size);
 
-        for (int v = 0; v < MAX_VOICES; v++) {
-            if (!s_voices[v].active) continue;
+        // Non-blocking: if a kit swap is in progress, emit this one buffer silent
+        // rather than stall the audio pipeline (swap holds the mutex only briefly).
+        if (xSemaphoreTake(s_kit_mutex, 0) == pdTRUE) {
+            if (s_kit.data) {
+                for (int v = 0; v < MAX_VOICES; v++) {
+                    if (!s_voices[v].active) continue;
 
-            slice_t *slice = &s_kit.slices[s_voices[v].slice_idx];
-            uint32_t pos = s_voices[v].pos;
-            uint32_t remaining = slice->length - pos;
-            uint32_t to_copy = (remaining < (uint32_t)buf_size) ? remaining : (uint32_t)buf_size;
-            uint32_t num_samples = to_copy / sizeof(int16_t);
+                    slice_t *slice = &s_kit.slices[s_voices[v].slice_idx];
+                    uint32_t pos = s_voices[v].pos;
+                    uint32_t remaining = slice->length - pos;
+                    uint32_t to_copy = (remaining < (uint32_t)buf_size) ? remaining : (uint32_t)buf_size;
+                    uint32_t num_samples = to_copy / sizeof(int16_t);
 
-            int16_t *src = (int16_t *)((uint8_t *)s_kit.data + slice->start + pos);
-            int vel_scale = s_voices[v].velocity;
+                    int16_t *src = (int16_t *)((uint8_t *)s_kit.data + slice->start + pos);
+                    int vel_scale = s_voices[v].velocity;
 
-            for (uint32_t i = 0; i < num_samples; i++) {
-                int32_t sample = (int32_t)src[i] * vel_scale / 127;
-                int32_t mixed = (int32_t)mix_buf[i] + sample;
-                // Clamp
-                if (mixed > 32767) mixed = 32767;
-                if (mixed < -32768) mixed = -32768;
-                mix_buf[i] = (int16_t)mixed;
+                    for (uint32_t i = 0; i < num_samples; i++) {
+                        int32_t sample = (int32_t)src[i] * vel_scale / 127;
+                        int32_t mixed = (int32_t)mix_buf[i] + sample;
+                        // Clamp
+                        if (mixed > 32767) mixed = 32767;
+                        if (mixed < -32768) mixed = -32768;
+                        mix_buf[i] = (int16_t)mixed;
+                    }
+
+                    s_voices[v].pos += to_copy;
+                    if (s_voices[v].pos >= slice->length) {
+                        s_voices[v].active = 0;
+                    }
+                }
             }
-
-            s_voices[v].pos += to_copy;
-            if (s_voices[v].pos >= slice->length) {
-                s_voices[v].active = 0;
-            }
+            xSemaphoreGive(s_kit_mutex);
         }
 
         size_t bytes_written;
@@ -260,6 +311,7 @@ esp_err_t sample_player_init(void)
     ESP_ERROR_CHECK(i2s_channel_enable(s_i2s_handle));
 
     memset(s_voices, 0, sizeof(s_voices));
+    s_kit_mutex = xSemaphoreCreateMutex();
 
     xTaskCreatePinnedToCore(i2s_render_task, "i2s_render", 4096, NULL, 6, NULL, SYNTH_CORE);
 

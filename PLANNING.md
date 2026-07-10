@@ -241,6 +241,59 @@ full debugging session. Guard rails:
 
 ## Session Log
 
+### 2026-07-09 — AMY sample player: I2C encoder + OLED kit selection ✅ HW-VERIFIED
+- **Goal:** make each AMYboard drum node self-contained — turn a knob to browse the
+  WAV kits on the SD card, see the selection on a screen, push to load. Plan file:
+  `~/.claude/plans/warm-mapping-cake.md`.
+- **Hardware:** Arduino Modulino Knob [ABX00107] (I2C 0x76/0x74) + SH1107 128x128 OLED
+  (I2C 0x3C), both on the AMYboard Qwiic bus (SDA=17, SCL=18).
+- **Built (all in `AmyBoard/NSMBL_SampleKits/main/`):**
+  - `i2c_bus.c` — shared `i2c_master` bus (new driver API).
+  - `modulino_knob.c` — probe + wrap-safe int16 delta + button-edge decode; we never `set()`.
+    **Corrected against the vendored `Docs/Amyboard/Arduino_Modulino-main` source:** real 7-bit
+    address is **0x3B/0x3A** (Arduino quotes 8-bit 0x76/0x74, lib divides by 2), and the read
+    frame is **4 bytes** with the pinstrap byte FIRST (discard byte0; count=1-2, button=3).
+  - `oled.c` + vendored **u8g2** component (BSD-2) — `u8g2_fonts.c` trimmed 38 MB → 26 KB
+    (3 fonts). Kit-list / loading / message screens. SH1107 panel variant is a one-line
+    knob: `OLED_SETUP` in `config.h` (swap to `_pimoroni_`/`_seeed_` if the image is offset).
+  - `ui.c` — scans `/sdcard/Kits/*.wav`, sorts, drives selection + load-on-press.
+- **Race-safe kit swap** in `sample_player.c`: kit now loads into a *local* `kit_t` (old kit
+  keeps playing through the ~5 s SD read), then swaps in under a brief `s_kit_mutex`; render
+  task takes the mutex with a 0 timeout (emits one silent buffer during the µs swap, never
+  stalls). **Fixed a latent reload leak** (old PSRAM buffer is now freed). `note_on` shares
+  the mutex so it never indexes a half-swapped kit.
+- **Verified on hardware (peripherals not yet attached):** I2C bus up; kit scan found **43
+  kits** on the card (sorted, extension-stripped, boot kit matched; `MAX_KITS` raised 32→96
+  after the first run capped out); knob/OLED absent → graceful "disabled", 808s still play;
+  no crashes; ~35% flash free.
+- **Hardware-verified live (evening 2026-07-09):** OLED shows the kit list; the knob
+  (found at **0x3B** once the address was corrected) scrolls the highlight; push shows the
+  "Loading…" splash and the new kit plays — the race-safe swap held up under live playback.
+- **SH1107 panel-offset fix:** the generic `_128x128_` descriptor applies `x_offset=96`,
+  which wrapped this module horizontally. Switched `OLED_SETUP` to the **`_seeed_`** variant
+  (`u8x8_seeed_128x128_display_info`, `x_offset=0`, same init seq / vertical start as generic)
+  — text snapped into alignment. (Not pimoroni — that variant also shifts the vertical start.)
+- Scope held tight: Modulino **Buttons** and MIDI-Program-Change kit switching deferred.
+
+### 2026-07-09 — AMY sample player brought up to snuff (parser port) + flashed
+- **Ported the running-status BLE parser into `NSMBL_SampleKits`.** The sample
+  player was still running the *old* pre-rewrite parser (duplicate timestamp-skip
+  blocks, no running-status fallback, desync on 0xA0/0xD0). Replaced its
+  `parse_midi_message` with the proven Xiao/Garee version (`data_bytes_for_status()`
+  lookup + real running-status tracking + SysRT/SysEx handling). Matters most for a
+  drum stream on ch10, where iOS routinely omits repeated status bytes → the old
+  parser dropped/corrupted hits. No `midi_event_t` change: aftertouch is advanced
+  correctly but not enqueued.
+- **Confirmed the UART0/console rule does NOT apply here** — the AMYboard sampler has
+  no UART MIDI (audio = I2S, MIDI = BLE), so console-on-UART0 stays (useful for
+  monitoring). The Garee GPIO15 MIDI-out current-source fix is likewise bridge-only.
+- **Built clean and flashed to the AMYboard** (`/dev/cu.usbmodem101`). Boot verified
+  over serial: SD mounted, `808_Mars_01_16kit.wav` loaded (16 cue points → 16 slices,
+  3.05 MB into PSRAM), advertised as `NSMBL_SampleKits`, BLE host connected.
+- Open item: the board flashed with the generic `main/config.h` (name
+  `NSMBL_SampleKits`, ch10), not the `config_Kneel.h` identity — copy that config
+  first if this unit should join the roster as **Kneel**.
+
 ### 2026-07-07 — Garee bridge live: BLE → DIN MIDI drives real hardware
 - **Scaffolded `AmyBoard/NSMBL_Bridge/` (Garee)** — a pure BLE→DIN MIDI forwarder
   (no AMY engine). Reuses the XIAO BLE parser; new `midi_out.c` re-serializes to

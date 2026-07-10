@@ -31,6 +31,32 @@
 - [x] Mozaic control surface — patch browsing, sound shaping, sustain, panic
 - [x] Band member configs created: Eenoo (pads), Prynz (lead), Botsee (bass), Kneel (drums)
 - [x] Named configs in `AmyBoard/configs/` — copy to config.h before flashing
+- [x] **AMY sample player (`NSMBL_SampleKits`) parser brought up to snuff** — ported the
+  running-status BLE parser from the Xiao/Garee rewrite (fixes dropped/corrupted hits on
+  ch10 drum streams that use running status). Built clean, flashed + boot-verified on the
+  AMYboard (SD mount, 16-slice kit load, BLE connect). (2026-07-09)
+  - [ ] Flash with `config_Kneel.h` identity if this unit should join the roster as Kneel
+    (currently flashed as generic `NSMBL_SampleKits`, ch10)
+
+### AMYboard sample player — I2C encoder + OLED kit selection (In Progress, 2026-07-09)
+*Plan: `~/.claude/plans/warm-mapping-cake.md`. Modulino Knob [ABX00107] @ 0x76/0x74 +
+SH1107 128x128 OLED @ 0x3C on the Qwiic bus (SDA=17/SCL=18).*
+- [x] Shared `i2c_master` bus (`i2c_bus.c`)
+- [x] Modulino Knob driver (`modulino_knob.c`) — wrap-safe delta + button edge
+- [x] SH1107 OLED via vendored u8g2 (`oled.c` + `components/u8g2/`, fonts trimmed 38 MB→26 KB)
+- [x] Runtime-safe kit swap (`sample_player.c`) — local-load-then-swap under `s_kit_mutex`,
+  render never stalls, **latent reload leak fixed**
+- [x] Kit scan of `/sdcard/Kits/*.wav` (`ui.c`) — sorted, ext-stripped; **43 kits** found on
+  the card (raised `MAX_KITS` 32→96)
+- [x] UI loop — turn scrolls, push loads with a "Loading…" screen
+- [x] Builds clean; boot-verified on HW (bus up, scan, graceful no-peripheral fallback, 808s intact)
+- [x] **Live bring-up ✅** — OLED kit list renders; knob scrolls (found at **0x3B** after the
+  address correction); push → "Loading…" → new kit plays; race-safe swap holds under playback.
+  SH1107 needed the **`_seeed_` variant** (`OLED_SETUP`): the generic `_128x128_` applies a
+  bogus `x_offset=96` that wrapped the display; seeed uses the same init with offset 0.
+  **Feature complete.**
+- [ ] (future) Modulino **Buttons** (mode/audition/panic); kit switch via MIDI Program Change;
+  persist last kit in NVS
 
 ## Phase 2b — XIAO Platform (In Progress)
 
