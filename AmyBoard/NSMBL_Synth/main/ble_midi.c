@@ -26,42 +26,77 @@ static QueueHandle_t s_midi_queue;
 static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_midi_attr_handle;
 
+static int data_bytes_for_status(uint8_t status)
+{
+    switch (status & 0xF0) {
+    case 0x80: return 2; // Note Off
+    case 0x90: return 2; // Note On
+    case 0xA0: return 2; // Poly Aftertouch
+    case 0xB0: return 2; // CC
+    case 0xC0: return 1; // Program Change
+    case 0xD0: return 1; // Channel Aftertouch
+    case 0xE0: return 2; // Pitch Bend
+    default:   return -1;
+    }
+}
+
 static void parse_midi_message(const uint8_t *data, uint16_t len)
 {
     // BLE MIDI packet: [header] [timestamp] [status] [data1] [data2] ...
-    // Minimum useful packet is 3 bytes (header + timestamp + status)
+    // Proper running-status parser (ported from NSMBL_SampleKits/Xiao): iOS omits
+    // the status byte on repeated same-status messages, so we must track it.
     if (len < 3) return;
 
-    int i = 0;
-    uint8_t header = data[i++];
-    (void)header;
+    ESP_LOGD(TAG, "BLE MIDI rx [%d bytes]", len);
+    ESP_LOG_BUFFER_HEX_LEVEL(TAG, data, len, ESP_LOG_DEBUG);
+
+    uint8_t running_status = 0;
+    int i = 1; // skip header byte
 
     while (i < len) {
-        // Skip timestamp bytes (high bit set, not a status byte position)
-        if (data[i] & 0x80 && i + 1 < len && data[i + 1] & 0x80) {
-            i++; // timestamp
-        }
+        // A message boundary starts with either:
+        //   - a timestamp byte (MSB set), optionally followed by a status byte, or
+        //   - a data byte (MSB clear) that continues the previous running status.
+        if (data[i] & 0x80) {
+            i++; // consume timestamp
+            if (i >= len) break;
 
+            // A status byte may follow the timestamp.
+            if (data[i] & 0x80) {
+                if (data[i] >= 0xF8) {
+                    // System Real-Time — single byte, no effect on running status
+                    i++;
+                    continue;
+                }
+                if (data[i] >= 0xF0) {
+                    // System Common / SysEx — skip its data bytes, cancel running status
+                    i++;
+                    while (i < len && !(data[i] & 0x80)) i++;
+                    running_status = 0;
+                    continue;
+                }
+                running_status = data[i++]; // channel voice status
+            }
+            // else: timestamp immediately followed by running-status data
+        }
+        // else: running-status data with no timestamp — reuse running_status
+
+        if (running_status == 0) {
+            // Stray data byte with no established status — skip it
+            i++;
+            continue;
+        }
         if (i >= len) break;
 
-        // Timestamp before status
-        if (data[i] & 0x80 && i + 1 < len && (data[i + 1] & 0x80)) {
-            i++;
-            if (i >= len) break;
-        }
+        int need = data_bytes_for_status(running_status);
+        if (need < 0 || i + need > len) break;
 
-        uint8_t status = data[i++];
-        uint8_t msg_type = status & 0xF0;
-        uint8_t channel = (status & 0x0F) + 1; // convert to 1-indexed
+        uint8_t msg_type = running_status & 0xF0;
+        uint8_t channel = (running_status & 0x0F) + 1; // 1-indexed
 
-        // Channel filter
+        // Channel filter (MIDI_CHANNEL == 0 means listen on all channels)
         if (channel != MIDI_CHANNEL && MIDI_CHANNEL != 0) {
-            // Skip data bytes for this message
-            if (msg_type == 0xC0 || msg_type == 0xD0) {
-                i += 1;
-            } else {
-                i += 2;
-            }
+            i += need;
             continue;
         }
 
@@ -69,40 +104,36 @@ static void parse_midi_message(const uint8_t *data, uint16_t len)
         event.channel = channel;
 
         switch (msg_type) {
-        case 0x90: // Note On
-            if (i + 1 >= len) return;
+        case 0x90: // Note On (vel 0 == Note Off)
             event.type = (data[i + 1] == 0) ? MIDI_NOTE_OFF : MIDI_NOTE_ON;
-            event.data1 = data[i++];
-            event.data2 = data[i++];
+            event.data1 = data[i];
+            event.data2 = data[i + 1];
             break;
         case 0x80: // Note Off
-            if (i + 1 >= len) return;
             event.type = MIDI_NOTE_OFF;
-            event.data1 = data[i++];
-            event.data2 = data[i++];
+            event.data1 = data[i];
+            event.data2 = data[i + 1];
             break;
         case 0xB0: // Control Change
-            if (i + 1 >= len) return;
             event.type = MIDI_CC;
-            event.data1 = data[i++];
-            event.data2 = data[i++];
+            event.data1 = data[i];
+            event.data2 = data[i + 1];
             break;
         case 0xC0: // Program Change
-            if (i >= len) return;
             event.type = MIDI_PROGRAM_CHANGE;
-            event.data1 = data[i++];
+            event.data1 = data[i];
             break;
         case 0xE0: // Pitch Bend
-            if (i + 1 >= len) return;
             event.type = MIDI_PITCH_BEND;
             event.pitch_bend = (int16_t)((data[i + 1] << 7) | data[i]) - 8192;
-            i += 2;
             break;
         default:
-            i++; // skip unknown
+            // Aftertouch (0xA0/0xD0) etc. — not forwarded; advance correctly.
+            i += need;
             continue;
         }
 
+        i += need;
         xQueueSend(s_midi_queue, &event, 0);
     }
 }
