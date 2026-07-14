@@ -1,0 +1,2300 @@
+<!doctype html>
+<html class="h-100" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+    <meta name="description" content="AMYboard Online Editor — create, tweak, and share synth patches and Python code for AMYboard right in your browser.">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+    <meta property="og:title" content="AMYboard Online Editor">
+    <meta property="og:image" content="https://amyboard.com/img/amyboard_editor_preview.png">
+    <meta property="og:description" content="Create, tweak, and share synth patches and Python code for AMYboard right in your browser. Send to your board in seconds.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@shorepinesound">
+    <meta name="twitter:creator" content="@shorepinesound">
+    <meta name="twitter:title" content="AMYboard Online Editor">
+    <meta name="twitter:description" content="Create, tweak, and share synth patches and Python code for AMYboard right in your browser. Send to your board in seconds.">
+    <meta name="twitter:image" content="https://amyboard.com/img/amyboard_editor_preview.png">
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://amyboard.com/editor/" />
+    <meta property="og:site_name" content="AMYboard" />
+    <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="img/favicon.png">
+    <meta name="author" content="shore pine sound systems">
+    <meta name="HandheldFriendly" content="true">
+    <title>AMYboard Online Editor</title>
+    <base href="/">
+    <link rel="stylesheet" href="css/theme.css">
+    <link href="css/prism.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/all.css" id="treejs_styles">
+    <link rel="stylesheet" href="amyrepl.css">
+    <link rel="stylesheet" href="xterm.css" />
+    <script src="xterm.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.48.4/codemirror.min.css" />
+    <script src="tree.js"></script>
+    <link rel="stylesheet" href="treejs.css" id="treejs_styles">
+    <!-- These filenames are replaced by the build system.
+         In control mode we skip loading AMY WASM and MicroPython. -->
+    <script>
+      (function() {
+        var params = new URLSearchParams(window.location.search);
+        var urlMode = params.get('mode');
+        if (!urlMode) {
+          var cookie = document.cookie.split('; ').find(function(c) { return c.startsWith('amyboard_mode='); });
+          if (cookie) urlMode = cookie.split('=')[1];
+        }
+        if (urlMode === 'simulate') {
+          document.write('<script src="AMYBOARDMJS" type="module"><\/script>');
+          document.write('<script type="text/javascript" id="amy_js_include" src="AMYJS"><\/script>');
+        }
+      })();
+    </script>
+
+    <script src="editor_knobs.js"></script>
+    <script src="./mini-coi.js" scope="./"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+    <script src="vendor/webmidi.iife.js"></script>
+    <script src="vendor/qwerty-hancock.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="amy_event_layout.generated.js"></script>
+    <script type="text/javascript" src="pcm_presets.generated.js"></script>
+    <script type="text/javascript" src="amy_api.generated.js"></script>
+    <script type="text/javascript" src="amy_parameters.js"></script>
+    <script>
+      // Default to the production World API. For local development, override with
+      // ?api=http://localhost:8090 (persisted), or ?api= (empty) to clear it.
+      // The production default is unchanged for normal users.
+      (function () {
+        var DEFAULT_BASE = "https://tulipcc-production.up.railway.app";
+        var override = "";
+        try {
+          var param = new URLSearchParams(window.location.search).get("api");
+          if (param !== null) {
+            if (param) window.localStorage.setItem("AMYBOARD_WORLD_API_BASE", param);
+            else window.localStorage.removeItem("AMYBOARD_WORLD_API_BASE");
+          }
+          override = window.localStorage.getItem("AMYBOARD_WORLD_API_BASE") || "";
+        } catch (e) {
+          override = "";
+        }
+        window.AMYBOARD_WORLD_API_BASE = override || DEFAULT_BASE;
+      })();
+    </script>
+    <script type="text/javascript" src="spss.js"></script>
+
+    <style>
+      /* inter-300 - latin */
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 300;
+        font-display: swap;
+        src: local(''),
+          url('./fonts/inter-v12-latin-300.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('./fonts/inter-v12-latin-300.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+      }
+
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-display: swap;
+        src: local(''),
+          url('./fonts/inter-v12-latin-500.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('./fonts/inter-v12-latin-500.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+      }
+
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 700;
+        font-display: swap;
+        src: local(''),
+          url('./fonts/inter-v12-latin-700.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('./fonts/inter-v12-latin-700.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+      }
+
+      .knob-grid .ui-knob-container {
+        width: 68px;
+        height: 68px;
+        margin: 0 auto;
+        overflow: visible;
+      }
+
+      .knob-grid {
+        --bs-gutter-y: 0.75rem;
+      }
+
+      .amy-knob {
+        width: 52px;
+        height: 52px;
+        margin: 0 auto;
+        touch-action: none;
+        user-select: none;
+      }
+
+      .amy-knob:focus-visible .amy-knob-face {
+        outline: 2px solid #f2c94c;
+        outline-offset: 4px;
+      }
+
+      .amy-knob-face {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        position: relative;
+        transform: rotate(var(--angle, 135deg));
+        background: radial-gradient(circle at 35% 35%, #515151 0%, #2c2c2c 55%, #1a1a1a 100%);
+        box-shadow: inset -6px -6px 12px rgba(0, 0, 0, 0.35),
+          inset 6px 6px 12px rgba(255, 255, 255, 0.06),
+          0 10px 20px rgba(0, 0, 0, 0.25);
+      }
+
+      .amy-knob-indicator {
+        position: absolute;
+        top: 5px;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        background: #f2c94c;
+        border-radius: 50%;
+        transform: translateX(-50%);
+        box-shadow: 0 0 6px rgba(242, 201, 76, 0.7);
+      }
+
+      .amy-knob-indicator-log {
+        background: #7fd3ff;
+        box-shadow: 0 0 6px rgba(127, 211, 255, 0.75);
+      }
+
+      .amy-pushbutton {
+        width: 52px;
+        height: 72px;
+        margin: 0 auto;
+        border-radius: 10px;
+        background: var(--pushbutton-color, #d04437);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 6px;
+        cursor: pointer;
+        user-select: none;
+        box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.3),
+          inset 4px 4px 8px rgba(255, 255, 255, 0.12),
+          0 10px 18px rgba(0, 0, 0, 0.28);
+      }
+
+      .amy-pushbutton:focus-visible {
+        outline: 2px solid #f2c94c;
+        outline-offset: 4px;
+      }
+
+      .amy-pushbutton-led {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #3a0a0a;
+        box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.35),
+          inset 2px 2px 4px rgba(255, 255, 255, 0.08);
+      }
+
+      .amy-pushbutton.is-on .amy-pushbutton-led {
+        background: #ff3b2f;
+        box-shadow: 0 0 10px rgba(255, 59, 47, 0.9),
+          inset 0 0 6px rgba(255, 255, 255, 0.45);
+      }
+
+      .amy-select {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+
+      .amy-select-control {
+        width: 80px;
+        height: 72px;
+        display: grid;
+        grid-template-rows: 18px 1fr 18px;
+        align-items: center;
+        justify-items: center;
+        background: #1e1e1e;
+        color: #f8f8f8;
+        border: 1px solid #333;
+        border-radius: 10px;
+        padding: 4px;
+        font-size: 9px;
+        box-shadow: inset -4px -4px 8px rgba(0, 0, 0, 0.35),
+          inset 4px 4px 8px rgba(255, 255, 255, 0.06);
+      }
+
+      .amy-select-control:focus-within {
+        outline: 2px solid #f2c94c;
+        outline-offset: 2px;
+      }
+
+      .amy-select-btn {
+        width: 100%;
+        height: 18px;
+        border: none;
+        border-radius: 6px;
+        background: #2c2c2c;
+        color: #f2c94c;
+        font-size: 10px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+        position: relative;
+        --arrow-color: #f2c94c;
+        --arrow-hole-opacity: 0;
+      }
+
+      .amy-select-btn:active {
+        background: #3a3a3a;
+      }
+
+      .amy-select-btn:disabled {
+        cursor: default;
+      }
+
+      .amy-select-btn.is-disabled {
+        --arrow-color: #666;
+        --arrow-hole-opacity: 1;
+      }
+
+      .knob-section.section-disabled {
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
+      .amy-select-btn::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        transform: translate(-50%, -50%);
+      }
+
+      .amy-select-btn::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 0;
+        height: 0;
+        border-left: 3px solid transparent;
+        border-right: 3px solid transparent;
+        transform: translate(-50%, -50%);
+        opacity: var(--arrow-hole-opacity);
+      }
+
+      .amy-select-btn-up::before {
+        border-bottom: 6px solid var(--arrow-color);
+      }
+
+      .amy-select-btn-down::before {
+        border-top: 6px solid var(--arrow-color);
+      }
+
+      .amy-select-btn-up::after {
+        border-bottom: 4px solid #2c2c2c;
+      }
+
+      .amy-select-btn-down::after {
+        border-top: 4px solid #2c2c2c;
+      }
+
+      .amy-select-display {
+        width: 100%;
+        text-align: center;
+        font-size: 9px;
+        line-height: 1.1;
+        padding: 0 2px;
+        color: #f8f8f8;
+        user-select: none;
+      }
+
+      .amy-select-display-clickable {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        cursor: pointer;
+      }
+
+      .amy-wave-preset-popup {
+        position: absolute;
+        z-index: 10000;
+        width: max-content;
+        max-width: 320px;
+        max-height: 260px;
+        overflow-y: auto;
+        background: #181818;
+        border: 1px solid #444;
+        border-radius: 8px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+        padding: 6px;
+      }
+
+      .amy-wave-preset-popup-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #ddd;
+        margin: 2px 4px 6px;
+      }
+
+      .amy-wave-preset-option {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        color: #f0f0f0;
+        border-radius: 6px;
+        padding: 4px 6px;
+        font-size: 11px;
+        line-height: 1.2;
+      }
+
+      .amy-wave-preset-option:hover {
+        background: #2a2a2a;
+      }
+
+      .amy-wave-preset-option.is-selected {
+        background: #2f4737;
+        color: #bfe8c6;
+      }
+
+      .knob-spacer {
+        width: 68px;
+        height: 68px;
+        margin: 0 auto;
+      }
+
+      .amy-keyboard {
+        width: 100%;
+        max-width: 900px;
+        height: 140px;
+        margin: 0 auto;
+        position: relative;
+        user-select: none;
+      }
+
+      #canvas {
+        width: 100%;
+        max-width: 256px;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        display: block;
+      }
+
+      .encoder-widget {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .encoder-arrow {
+        background: none;
+        border: 1px solid #666;
+        border-radius: 8px;
+        color: #ccc;
+        cursor: pointer;
+        padding: 6px;
+        line-height: 0;
+        transition: background 0.1s, color 0.1s;
+      }
+      .encoder-arrow:hover {
+        background: #333;
+        color: #fff;
+      }
+      .encoder-arrow:active {
+        background: #555;
+      }
+      .encoder-push {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: 2px solid #888;
+        background: #222;
+        color: #ccc;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.1s, border-color 0.1s;
+      }
+      .encoder-push:hover {
+        border-color: #aaa;
+      }
+      .encoder-push:active, .encoder-push.pressed {
+        background: #555;
+        border-color: #fff;
+      }
+
+      @media (min-width: 800px) {
+        .knob-col {
+          flex: 0 0 8.333%;
+          max-width: 8.333%;
+        }
+        #knob-grid-channel .knob-section-main {
+          flex: 0 0 50%;
+          max-width: 50%;
+          width: 50%;
+        }
+        #knob-grid-global .knob-col {
+          flex: 0 0 33.333%;
+          max-width: 33.333%;
+          width: 33.333%;
+        }
+      }
+
+      .knob-section-header {
+        text-align: center;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #f2f2f2;
+        background: #2b2b2b;
+        border-radius: 10px;
+        padding: 4px 10px;
+        margin: 4px 0 2px;
+        font-size: 10px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .nav-tabs .nav-link {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.75rem;
+      }
+
+      .tab-header-row {
+        border-bottom: 1px solid var(--bs-nav-tabs-border-color, #dee2e6);
+      }
+
+      .tab-header-row .nav-tabs {
+        border-bottom: 0;
+        margin-bottom: -1px;
+      }
+
+      .form-control,
+      .form-select,
+      .form-check-label {
+        font-size: 0.85rem;
+      }
+
+
+      .knob-value {
+        font-size: 0.62rem;
+        padding: 0.2rem 0.4rem;
+      }
+
+      .knob-label {
+        font-size: 0.65rem;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .knob-section {
+        flex: 0 0 100%;
+        max-width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        padding-bottom: 4px;
+      }
+
+      @media (min-width: 800px) {
+        .knob-section-main {
+          flex: 0 0 min(100%, calc(var(--knob-units, var(--knob-count, 14)) * 7.142%));
+          max-width: min(100%, calc(var(--knob-units, var(--knob-count, 14)) * 7.142%));
+          width: min(100%, calc(var(--knob-units, var(--knob-count, 14)) * 7.142%));
+        }
+        .knob-section-main .knob-col {
+          flex: 0 0 calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 14)));
+          max-width: calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 14)));
+        }
+      }
+
+      @media (max-width: 799px) {
+        .patch-global-panel::before {
+          content: "Effects";
+          display: block;
+          background: #1f2937;
+          border-radius: 12px;
+          color: #fff;
+          font-size: 0.75rem;
+          letter-spacing: 0.12em;
+          font-weight: 700;
+          text-align: center;
+          padding: 6px 10px;
+          margin-bottom: 10px;
+        }
+        .knob-col-spacer {
+          display: none;
+        }
+      }
+
+      #patch-pane {
+        background: #f2f3f5;
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      .patch-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .patch-layout-header {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .patch-toolbar {
+        background:rgba(44, 55, 55, 0.75);
+        border-radius: 12px;
+        padding: 6px 6px;
+        margin: 0;
+      }
+
+      .patch-global-title {
+        display: none;
+        background: #1f2937;
+        border-radius: 12px;
+        color: #fff;
+        font-size: 0.75rem;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .patch-layout-body {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .patch-channel-panel {
+        background: linear-gradient(145deg, #e0ebe7 0%, #c8dbd5 100%);
+        border-radius: 14px;
+        padding: 12px;
+      }
+
+      .patch-global-panel {
+        background: linear-gradient(145deg, #f5f7fb 0%, #dce5ef 100%);
+        border-radius: 14px;
+        padding: 12px;
+      }
+
+      @media (min-width: 800px) {
+        .patch-layout-header,
+        .patch-layout-body {
+          grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+          gap: 0;
+        }
+        .patch-toolbar {
+          grid-column: 1;
+        }
+        .patch-global-title {
+          display: flex;
+          grid-column: 3;
+        }
+        .patch-channel-panel {
+          grid-column: 1;
+        }
+        .patch-global-panel {
+          grid-column: 3;
+        }
+      }
+
+      .patch-select-group .patch-init-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+      }
+
+      .patch-select-group {
+        gap: 4px;
+      }
+
+      .patch-select-group .form-select {
+        font-size: 0.8rem;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+        max-width: 240px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .patch-save-group {
+        gap: 4px;
+        align-items: center;
+      }
+
+      .patch-save-group .patch-save-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+      }
+
+      .patch-save-group .patch-save-input {
+        max-width: 120px;
+        height: calc(1.5em + 0.75rem + 2px);
+      }
+
+      .patch-save-group .patch-load-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+      }
+
+      #channel-active-checkbox + label {
+        color: #fff;
+      }
+
+      .env-file-list {
+        background-color: #002b36;
+      }
+
+      .env-file-item {
+        width: 100%;
+        border: 0;
+        margin: 0;
+        padding: 2px 5px;
+        text-align: left;
+        background-color: #002b36;
+        color: #839496;
+        font-size: 12px;
+        border-radius: 0;
+      }
+
+      .env-file-item:hover {
+        background-color: #073642;
+        color: #839496;
+      }
+
+      .env-file-item.selected,
+      .env-file-item.selected:hover {
+        background-color: #606060;
+        color: #fff;
+      }
+
+      .env-file-empty {
+        padding: 6px 8px;
+        font-size: 12px;
+        color: #839496;
+        background-color: #002b36;
+      }
+
+      /* Push content below fixed navbar */
+      body {
+        padding-top: 70px;
+      }
+
+      /* ── NAV OVERRIDES (match marketing site) ── */
+      .navbar.scrolled {
+        background: rgba(0,0,0,0.92) !important;
+        backdrop-filter: blur(8px);
+      }
+      .navbar {
+        background: rgba(0,0,0,0.92) !important;
+        transition: background 0.3s;
+      }
+      .navbar .navbar-brand,
+      .navbar .nav-link {
+        color: #fff !important;
+      }
+      .navbar .nav-link:hover {
+        color: #FFDD00 !important;
+      }
+      .navbar .navbar-toggler {
+        border-color: rgba(255,255,255,0.5);
+      }
+      .navbar .navbar-toggler-icon {
+        filter: invert(1);
+      }
+      .navbar .btn-warning {
+        background: #FFDD00 !important;
+        border-color: #FFDD00 !important;
+        color: #000 !important;
+        font-weight: 700;
+      }
+
+      /* ── MOBILE NAV ── */
+      @media (max-width: 991px) {
+        .navbar .navbar-collapse,
+        .navbar .navbar-collapse.collapsing,
+        .navbar .navbar-collapse.show {
+          background: #000 !important;
+          padding: 1rem 1.5rem;
+          margin: 0.5rem -1rem 0;
+          border-radius: 4px;
+        }
+        .navbar .navbar-collapse .nav-link {
+          color: #fff !important;
+          font-size: 1.1rem;
+          padding: 0.6rem 0 !important;
+        }
+        .navbar .navbar-collapse .btn-warning {
+          color: #000 !important;
+        }
+        .navbar .navbar-toggler {
+          border-color: #FFDD00;
+        }
+        .navbar .navbar-toggler-icon {
+          background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='white' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+          filter: none;
+        }
+      }
+
+      /* ── FOOTER (match marketing site) ── */
+      .site-footer {
+        background: #000;
+        color: #999;
+        padding: 3rem 0 2rem;
+      }
+      .site-footer a {
+        color: #ccc;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .site-footer a:hover {
+        color: #FFDD00;
+      }
+      .footer-links {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin: 0;
+      }
+      .footer-links li {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .footer-links img {
+        filter: invert(1);
+        opacity: 0.7;
+      }
+      /* Terminal REPL */
+      .repl-summary {
+        cursor: pointer;
+        user-select: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #555;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      .repl-summary::-webkit-details-marker { display: none; }
+      details[open] .repl-summary { color: #222; }
+      .repl-summary::before { content: "▶"; font-size: 0.7rem; transition: transform 0.15s; }
+      details[open] .repl-summary::before { transform: rotate(90deg); }
+      .repl-wrap {
+        background: #0f0f0f;
+        border-radius: 6px;
+        padding: 4px 6px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav id="navScroll" class="navbar navbar-expand-lg navbar-dark fixed-top scrolled" tabindex="0">
+      <div class="container">
+        <a class="navbar-brand pe-4 fs-4" href="/editor/">
+          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
+          <span class="ms-1 fw-bolder">AMYboard online</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link" href="/#get">
+                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" style="filter:invert(1)" />
+                Get one
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/README.md">
+                <img src="img/github-mark.svg" width="24" height="24" style="filter:invert(1)" /> Github &amp; Docs
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://discord.com/invite/TzBFkUb8pG">
+                <img src="img/discord-mark-black.svg" width="24" height="24" style="filter:invert(1)" /> Discord
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://tulip.computer/">
+                <img src="img/favicon.png" width="24" height="24" /> Tulip
+              </a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="/">
+                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" /> AMYboard home
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <script type="module">
+      // Initialize Terminal REPL (xterm.js)
+      const replTerm = new Terminal({
+        rows: 12,
+        cols: 120,
+        fontSize: 12,
+        theme: { background: '#0f0f0f' }
+      });
+      replTerm.open(document.getElementById('repl-terminal'));
+      window.replClear = () => replTerm.clear();
+
+      const stdoutWriter = (line) => {
+        // MicroPython sends one char at a time; char 10 is LF — xterm needs CRLF
+        if (line[0] == 10) {
+          replTerm.writeln('');
+        } else {
+          replTerm.write(line);
+        }
+      };
+
+      // Use onData instead of onKey — fires for keypresses AND paste (Cmd+V).
+      // Queue input so async replProcessCharWithAsyncify calls stay in order.
+      const replInputQueue = [];
+      let replProcessing = false;
+      async function drainReplQueue() {
+        if (replProcessing) return;
+        replProcessing = true;
+        while (replInputQueue.length > 0) {
+          await mp.replProcessCharWithAsyncify(replInputQueue.shift());
+        }
+        replProcessing = false;
+      }
+      replTerm.onData(data => {
+        for (let i = 0; i < data.length; i++) {
+          replInputQueue.push(data.charCodeAt(i));
+        }
+        drainReplQueue();
+      });
+
+      // If no mode was detected (no URL param, no cookie), show modal and stop.
+      // The modal buttons call select_mode() which reloads the page with ?mode=X.
+      if (_detected_mode === null) {
+        show_mode_modal();
+        // Don't proceed further — wait for user to pick a mode.
+        // The modal buttons reload the page with ?mode=X.
+      } else if (amyboard_mode === 'simulate') {
+        mp = await loadMicroPython({
+          stdout: stdoutWriter,
+          linebuffer: false,
+          pystack: 64 * 1024,
+          heapsize: 8 * 1024 * 1024
+        });
+        await sleep_ms(50);
+        // Tell MP to start serving a REPL
+        await mp.replInit();
+        await replTerm.clear();
+        await sleep_ms(50);
+        // Start up the AMYboard stuff
+        await start_amyboard();
+        await refresh_amyboard_world_files();
+
+        // Check if URL has env params to auto-load an environment
+        check_url_env_params();
+        apply_mode_ui();
+
+        // Show a welcome modal that forces a click (required by browser audio
+        // policy). A click anywhere on the modal (button, content, or backdrop)
+        // dismisses it and starts audio via start_audio().
+        var welcomeEl = document.getElementById('simulateWelcomeModal');
+        if (welcomeEl && window.bootstrap) {
+          var welcomeModal = bootstrap.Modal.getOrCreateInstance(welcomeEl, { backdrop: 'static', keyboard: false });
+          var dismissed = false;
+          welcomeEl.addEventListener('click', function() {
+            if (dismissed) return;
+            dismissed = true;
+            welcomeModal.hide();
+            if (typeof start_audio === 'function') { start_audio(); }
+          });
+          welcomeModal.show();
+        }
+      } else {
+        // Control mode: sysex routing, MIDI init, no WASM/MicroPython
+        apply_mode_ui();
+        if (typeof WebMidi !== 'undefined' && !WebMidi.supported) {
+          // Browser doesn't support WebMIDI — show blocking modal.
+          var noMidiEl = document.getElementById('noWebMidiModal');
+          if (noMidiEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(noMidiEl, { backdrop: 'static', keyboard: false }).show();
+          }
+        } else {
+          // SYNC 2: restore the editor from the local draft (or the default
+          // sketch if none) instead of pulling from the board on load. No Pull
+          // dialog on page load; the user can pull on demand with "Read".
+          if (typeof restore_sketch_into_editor === "function") {
+            restore_sketch_into_editor();
+          }
+          // Pageload sync flow: reboot into bootloader, pull sketch via zD,
+          // then zP restart_sketch. Skip zA — in bootloader mode the sketch
+          // hasn't run yet so there's no live AMY state to capture, and zA
+          // would just overwrite the on-disk sketch.py's knobs with empty
+          // state.
+          //
+          // Windows Chrome workaround: Chrome's WebMIDI on Windows holds a
+          // stale USB endpoint handle across USB disconnect/reconnect — no
+          // statechange events fire, sendSysex goes into the void for up
+          // to ~60s. Rather than fight Chrome's cache from JS, we force a
+          // full page reload AFTER sending zB: the fresh document calls
+          // navigator.requestMIDIAccess() again from a clean slate, which
+          // releases Chrome's cached handle and picks up the rebooted
+          // board's fresh USB descriptor. A sessionStorage flag tells the
+          // post-reload page to skip zB (avoiding an infinite reboot loop)
+          // and go straight into the sync.
+          var _IS_WINDOWS_CHROME = /Windows/i.test(navigator.userAgent) &&
+                                   /Chrome/i.test(navigator.userAgent);
+          window.pageload_control_sync = async function() {
+            // Post-reset reload path: reset_amyboard() on Windows Chrome
+            // sends zB, sets this flag, and reloads — we land here on the
+            // fresh document. Pick up where reset_amyboard left off by
+            // waiting for the board and sending zP factory_reset against
+            // the now-fresh MIDIAccess.
+            var _post_reset_reload = sessionStorage.getItem('amyboard_post_reset_reload') === '1';
+            if (_post_reset_reload) {
+              sessionStorage.removeItem('amyboard_post_reset_reload');
+              console.log('pageload: post-reset reload — completing reset');
+              _show_resetting_modal();
+              var resetReady = await wait_for_board_ready(10000);
+              if (!resetReady) {
+                _hide_resetting_modal();
+                return;
+              }
+              if (typeof _reset_amyboard_send_and_cleanup === 'function') {
+                await _reset_amyboard_send_and_cleanup();
+              } else {
+                _hide_resetting_modal();
+              }
+              return;
+            }
+            // Post-upload reload path: any zB+upload flow on Windows Chrome
+            // (import from AMYboard World, load_world_environment_by_name,
+            // save_amy_state / "Send to AMYboard") stashed its options in
+            // sessionStorage and reloaded. Continue the flow here against
+            // the fresh MIDIAccess.
+            var _post_zb_upload_raw = sessionStorage.getItem('amyboard_post_zb_upload');
+            if (_post_zb_upload_raw) {
+              sessionStorage.removeItem('amyboard_post_zb_upload');
+              var _uploadOpts = null;
+              try { _uploadOpts = JSON.parse(_post_zb_upload_raw); } catch (e) {}
+              console.log('pageload: post-zB upload reload — completing upload', _uploadOpts);
+              _show_saving_modal();
+              var uploadReady = await wait_for_board_ready(10000);
+              if (!uploadReady) {
+                _hide_saving_modal();
+                return;
+              }
+              if (_uploadOpts && typeof _upload_sketch_post_bootloader === 'function') {
+                await _upload_sketch_post_bootloader(_uploadOpts);
+              } else {
+                _hide_saving_modal();
+              }
+              return;
+            }
+            // Post-zB reload: continuation of a previous green-button click
+            // on Windows Chrome. The board is already rebooting into
+            // bootloader mode — go straight to busy state, skip the gate
+            // and skip zB.
+            var _post_zb_reload = sessionStorage.getItem('amyboard_post_zb_reload') === '1';
+            if (_post_zb_reload) {
+              sessionStorage.removeItem('amyboard_post_zb_reload');
+              _show_syncing_modal_busy();
+              console.log('pageload: post-zB reload — skipping zB, waiting for board...');
+              var ready = await wait_for_board_ready(10000);
+              if (!ready) {
+                _show_syncing_modal_error();
+                return;
+              }
+            } else {
+              // SYNC 2: no automatic pull on a fresh page load. The editor was
+              // restored from the local draft above; the user pulls on demand via
+              // the "Read from your AMYboard" button.
+              return;
+            }
+            // Pull sketch.py from hardware (zD only, no zA).
+            _sync_stage = 'pending';
+            _last_sketch_text = null;
+            _sysex_reasm = null;
+            _sysex_b64_accum = '';
+            if (_sync_timeout) clearTimeout(_sync_timeout);
+            _sync_timeout = setTimeout(function() {
+              _sync_timeout = null;
+              if (_sync_stage !== null) {
+                _sync_stage = null;
+                _show_syncing_modal_error();
+                if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('sync timeout')); }
+              }
+            }, _SYNC_TIMEOUT_MS);
+            var pullPromise = new Promise(function(resolve, reject) {
+              _sync_resolve = resolve;
+              _sync_reject = reject;
+            });
+            console.log('pageload: sending zD');
+            amy_add_log_message('zD/user/current/sketch.pyZ');
+            try {
+              await pullPromise;
+              console.log('pageload: zD response received');
+            } catch (e) {
+              console.warn('pageload: zD pull failed', e);
+              return;
+            }
+            // Board is in bootloader mode (sketch never imported).
+            // Use zP to import and start the sketch.
+            amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
+            console.log('pageload: sketch started via zP');
+          };
+          // pageload_control_sync handles continuations (post-reset,
+          // post-zB-upload, post-zB reload) inline and gates fresh page
+          // loads behind the green Pull button via _show_syncing_modal,
+          // so the post-MIDI-init callback can call it directly.
+          _on_midi_ready = window.pageload_control_sync;
+          await start_midi();
+        }
+      }
+
+      // Auto-open a tab if URL has a hash (e.g. #world)
+      if (window.location.hash) {
+        var hashTab = document.getElementById(window.location.hash.substring(1) + "-tab");
+        if (hashTab) {
+          var tab = new bootstrap.Tab(hashTab);
+          tab.show();
+        }
+      }
+
+      // When the main World tab is shown, refresh the patch dropdown if
+      // the Patches sub-tab is currently active (Bootstrap won't re-fire
+      // shown.bs.tab on the sub-tab in that case).
+      var mainWorldTab = document.getElementById("world-tab");
+      if (mainWorldTab) {
+        mainWorldTab.addEventListener("shown.bs.tab", function() {
+          // Load environments on first visit to the World tab.
+          if (typeof refresh_amyboard_world_files === "function" &&
+              (!amyboard_world_files || !amyboard_world_files.length)) {
+            refresh_amyboard_world_files();
+          }
+        });
+      }
+
+      // Create the editor and see if there's a share URL to decompress into it
+      var editorElement = document.getElementById('collapseEditor');
+      editor = CodeMirror.fromTextArea(document.getElementById(`code`), { 
+        mode: { 
+          name: "python", 
+          version: 3, 
+          singleLineStringErrors: false,
+          lint: false
+        }, 
+        lineNumbers: true, 
+        indentUnit: 4,
+        // #580: Tab inserts spaces (never a literal tab) so Python indentation
+        // is valid; Tab/Shift-Tab indent/dedent the current selection.
+        extraKeys: {
+          Tab: function(cm) {
+            if (cm.somethingSelected()) {
+              cm.indentSelection("add");
+            } else {
+              cm.replaceSelection(" ".repeat(cm.getOption("indentUnit") || 4), "end");
+            }
+          },
+          "Shift-Tab": function(cm) {
+            cm.indentSelection("subtract");
+          }
+        },
+        matchBrackets: true,
+        spellCheck: false,
+        autocorrect: false,
+        theme: "lucario",
+        lint: false,
+      }); 
+      // #580: never let a literal tab into the document. Content loaded via
+      // setValue (files, shared sketches) or pasted text can contain tabs;
+      // convert each to spaces so getValue() -- and thus every saved file --
+      // stays tab-free and valid Python (and editable in the Tulip CC editor).
+      editor.on("beforeChange", function(cm, change) {
+        if (change.update && change.text.some(function(line) { return line.indexOf("\t") !== -1; })) {
+          var spaces = " ".repeat(cm.getOption("indentUnit") || 4);
+          change.update(change.from, change.to, change.text.map(function(line) {
+            return line.split("\t").join(spaces);
+          }));
+        }
+      });
+      editor.on("change", function(cm, change) {
+        window.environment_editor_dirty = true;
+        // SYNC 2: persist the editor's sketch locally so it survives a page
+        // reload (restored on load instead of pulling from the board).
+        if (typeof window.save_sketch_draft === "function") {
+          clearTimeout(window._sketch_draft_timer);
+          window._sketch_draft_timer = setTimeout(function() {
+            window.save_sketch_draft(editor.getValue());
+          }, 400);
+        }
+        // SYNC 2: a USER edit/paste (not our own programmatic setValue/reflect)
+        // must rebuild the knob log from the editor's block — otherwise Write (or
+        // the next knob move) would splice a stale log over it and wipe the block.
+        if (change && change.origin && change.origin !== "setValue"
+            && typeof window.schedule_log_rebuild_from_editor === "function") {
+          window.schedule_log_rebuild_from_editor();
+        }
+      });
+      document.addEventListener("click", function() {
+        if (typeof window.save_editor_if_dirty === "function") {
+          window.save_editor_if_dirty();
+        }
+      });
+      editor.setSize(null,editor_height);
+      if (typeof flush_pending_environment_editor_load === "function") {
+        await flush_pending_environment_editor_load();
+      }
+      // Apply deferred sketch content (draft/default) from a restore that ran
+      // before the editor existed, then position the knobs once the grid is up.
+      if (window._deferred_editor_content) {
+        editor.setValue(window._deferred_editor_content);
+        delete window._deferred_editor_content;
+        window.environment_editor_dirty = false;
+        if (typeof window.position_knobs_from_sketch_when_ready === "function") {
+          window.position_knobs_from_sketch_when_ready();
+        }
+      }
+    </script>
+
+    <main class="container pt-3 pt-md-5 mt-2 mt-md-5">
+      <div class="alert alert-warning alert-dismissible fade show d-block d-md-none text-center mb-3" style="font-size:0.85rem;" role="alert">
+        AMYboard online will work on mobile but you'll have a much better experience in a desktop browser.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size:0.65rem;"></button>
+      </div>
+      <!-- Mode selection modal (shown on first visit if no cookie/URL param) -->
+      <div class="modal fade" id="modeSelectionModal" tabindex="-1" aria-labelledby="modeSelectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:720px;">
+          <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+              <h4 class="modal-title w-100 text-center" id="modeSelectionModalLabel">How would you like to use AMYboard Online?</h4>
+            </div>
+            <div class="modal-body text-center">
+              <p class="text-muted mb-4">You can switch between modes at any time.</p>
+              <div class="d-flex justify-content-center gap-3 mb-3">
+                <button type="button" class="btn btn-success btn-lg px-4 text-start flex-fill" onclick="select_mode('simulate');" style="max-width:310px;">
+                  <div class="fw-bold">Simulate an AMYboard</div>
+                  <div class="fw-normal mt-1" style="font-size:0.72rem; line-height:1.3;">Your browser can act as an AMYboard. You can hear the audio and control the simulated synth with Python or MIDI.</div>
+                </button>
+                <button type="button" class="btn btn-dark btn-lg px-4 text-start flex-fill" onclick="select_mode('control');" style="max-width:310px;">
+                  <div class="fw-bold">Control your AMYboard</div>
+                  <div class="fw-normal mt-1" style="font-size:0.72rem; line-height:1.3;">Make sure your AMYboard is connected via USB or MIDI. Every knob and code update goes right to your AMYboard.</div>
+                </button>
+              </div>
+              <div class="form-check d-inline-flex align-items-center gap-1">
+                <input class="form-check-input" type="checkbox" id="mode_remember" checked>
+                <label class="form-check-label text-muted small" for="mode_remember">Remember my choice</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Welcome / start-audio modal (simulate mode) -->
+      <div class="modal fade" id="simulateWelcomeModal" tabindex="-1" aria-labelledby="simulateWelcomeModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
+          <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+              <h4 class="modal-title w-100 text-center" id="simulateWelcomeModalLabel">Welcome to AMYboard Simulator</h4>
+            </div>
+            <div class="modal-body text-center px-4 py-4">
+              <p class="text-muted mb-4">To get started, click the button below to start audio.</p>
+              <button type="button" class="btn btn-success btn-lg px-4" id="simulate-welcome-start-btn">Click anywhere to start</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saving modal (control mode) -->
+      <div class="modal fade" id="savingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-body text-center py-4">
+              <div class="spinner-border text-danger mb-3" style="width:2.5rem;height:2.5rem;" role="status"></div>
+              <div class="fw-semibold">Sending to AMYboard&hellip;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resetting modal (simulate mode) -->
+      <div class="modal fade" id="resettingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-body text-center py-4">
+              <div class="spinner-border text-danger mb-3" style="width:2.5rem;height:2.5rem;" role="status"></div>
+              <div class="fw-semibold" id="resetting-modal-label">Resetting&hellip;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No WebMIDI modal (control mode on unsupported browser) -->
+      <div class="modal fade" id="noWebMidiModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+          <div class="modal-content">
+            <div class="modal-body text-center px-4 py-4">
+              <div class="text-danger fw-semibold mb-2">WebMIDI Not Available</div>
+              <p class="text-muted small mb-3">Control mode requires WebMIDI to communicate with your AMYboard. This browser does not support WebMIDI. Please use Chrome, Edge, or Opera, or switch to Simulate mode.</p>
+              <button type="button" class="btn btn-primary btn-sm" onclick="switch_amyboard_mode();">Switch to Simulate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Firmware version notice (control mode): dismissable warning shown when
+           the board's firmware can't be detected or is older than the latest
+           release. Never blocks — "Continue" proceeds, "Update Firmware" opens
+           the flasher. -->
+      <div class="modal fade" id="fwWarnModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
+          <div class="modal-content">
+            <div class="modal-body text-center px-4 py-4">
+              <div id="fw-warn-title" class="text-warning fw-semibold mb-2">AMYboard firmware update available</div>
+              <p id="fw-warn-body" class="text-muted small mb-3">Your AMYboard firmware is older than the latest release. Updating is recommended.</p>
+              <div class="d-flex gap-2 justify-content-center">
+                <button type="button" class="btn btn-primary btn-sm" id="fw-warn-update">Update Firmware</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="fw-warn-continue">Continue</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Syncing modal (control mode) -->
+      <!-- No 'fade': Bootstrap's fade defers display:block to an async animation
+           callback, which races _hide_syncing_modal() when a pull completes
+           faster than the ~150ms fade and leaves the spinner stuck on screen
+           (#952). Synchronous show/hide avoids the race. -->
+      <div class="modal" id="syncingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+          <div class="modal-content position-relative">
+            <button type="button" class="btn-close position-absolute top-0 end-0 m-2" style="z-index:10;" aria-label="Close" onclick="_hide_syncing_modal();"></button>
+            <div class="modal-body text-center px-4 py-4">
+              <!-- Spinner (shown while syncing) -->
+              <div id="sync-modal-spinner">
+                <div class="spinner-border text-primary mb-3" style="width:2.5rem;height:2.5rem;" role="status"></div>
+                <div class="fw-semibold mb-3">Pulling from AMYboard&hellip;</div>
+              </div>
+              <!-- Error (shown on timeout) -->
+              <div id="sync-modal-error" class="d-none">
+                <div class="text-danger fw-semibold mb-2">Could not connect to AMYboard</div>
+                <p class="text-muted small mb-3">Make sure your AMYboard is connected either by USB (and choose AMYboard for MIDI in and out) or via MIDI interface (connect your computer's MIDI out to AMYboard's MIDI in and vice versa.)</p>
+              </div>
+              <!-- MIDI dropdowns (always visible) -->
+              <div class="text-start mb-3">
+                <label class="form-label small fw-bold mb-1">MIDI In</label>
+                <select id="sync-modal-midi-in" class="form-select form-select-sm mb-2" disabled></select>
+                <label class="form-label small fw-bold mb-1">MIDI Out</label>
+                <select id="sync-modal-midi-out" class="form-select form-select-sm mb-2" disabled></select>
+                <button type="button" class="btn btn-outline-primary btn-sm w-100" id="sync-modal-change-btn" onclick="sync_modal_change_ports();">Change MIDI Ports</button>
+              </div>
+              <!-- Pull from AMYboard (shown on fresh page load; user clicks to start the pull) -->
+              <p id="sync-modal-pull-warning" class="text-danger small fw-semibold mb-2 d-none">This will replace your sketch with the one on your AMYboard.</p>
+              <button type="button" class="btn btn-success btn-lg w-100 d-none mb-3" id="sync-modal-pull-btn" onclick="start_pull_from_amyboard();">Pull from AMYboard</button>
+              <!-- Try Again (shown on error) -->
+              <button type="button" class="btn btn-primary btn-sm d-none mb-2" id="sync-modal-retry-btn" onclick="sync_modal_retry();">Try again</button>
+              <div class="d-flex gap-2 justify-content-center">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="switch_amyboard_mode();">Switch to Simulate</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="_hide_syncing_modal(); reset_amyboard();">Reset AMYboard</button>
+                <button type="button" class="btn btn-outline-warning btn-sm" onclick="dismiss_sync_modal_and_upgrade();">Upgrade Firmware</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body">
+          <form name="amyboard_settings">
+            <div class="row align-items-center">
+              <div class="col-md-auto align-top small d-flex align-items-center" id="audioin_grow">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
+                  <label class="form-check-label" for="amy_audioin">Allow audio input</label>
+                </div>
+              </div>
+              <div class="col-12 col-md-3 align-self-start small mt-2 mt-md-0" id="midi-input-col">
+                <div id="midi-input-panel">
+                  <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                    <option selected>MIDI in: [Not available]</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-12 col-md-3 align-self-start small mt-2 mt-md-0" id="midi-output-col">
+                <div id="midi-output-panel">
+                  <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                    <option selected>MIDI out: [Not available]</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-12 col-md-3 align-self-start small mt-2 mt-md-0 d-none" id="midi-passthru-col">
+                <div id="midi-passthru-panel">
+                  <select onchange="setup_midi_passthru()" id="midi-passthru-select" class="form-select form-select-sm" aria-label="MIDI Input Pass-Thru">
+                    <option value="" selected>MIDI Input Pass-Thru: [None]</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-12 col-md-auto small mt-2 mt-md-0 d-none" id="amyboard-port-warning">
+                <div class="d-flex align-items-start gap-2 py-1 px-2 rounded" style="background:#fff3cd;border:1px solid #ffe69c;color:#664d03;">
+                  <span style="display:inline-block;width:8px;height:8px;background:#ffc107;border-radius:50%;margin-top:4px;flex-shrink:0;"></span>
+                  <span style="line-height:1.3;">
+                    Make sure your selected MIDI ports are connected to your AMYboard<br>
+                    (computer IN to AMYboard OUT, and vice versa)
+                  </span>
+                  <button type="button" class="btn-close btn-sm ms-1" aria-label="Dismiss" onclick="dismiss_amyboard_port_warning();" style="font-size:0.65rem;"></button>
+                </div>
+              </div>
+              <div class="col-md-auto align-top small d-flex align-items-center mt-2 mt-md-0">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="mode-switch-btn" onclick="switch_amyboard_mode();">
+                  Switch to Control
+                </button>
+              </div>
+              <div class="col-12 col-md-8 align-self-start small mt-2 mt-md-0 d-none" id="midi-warning-col">
+                <div class="alert alert-warning py-2 mb-0">
+                  This page can use WebMIDI on <a href="https://caniuse.com/midi" target="_blank">supported browsers</a>.
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card border-0 bg-light shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center tab-header-row">
+            <ul class="nav nav-tabs w-100" id="editorTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="patch-tab" data-bs-toggle="tab" data-bs-target="#patch-pane" type="button" role="tab" aria-controls="patch-pane" aria-selected="true">Patch</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Code <span id="code-tab-error-badge" class="d-none" title="Your sketch has an error — click to view" style="color:#ff4444;font-weight:700;cursor:pointer;" onclick="if(window._last_python_error){ show_python_error(window._last_python_error); }">(!)</span></button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#world-pane" type="button" role="tab" aria-controls="world-pane" aria-selected="false">AMYboard World</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reset-tab" data-bs-toggle="tab" data-bs-target="#reset-pane" type="button" role="tab" aria-controls="reset-pane" aria-selected="false">Reset</button>
+              </li>
+              <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="simulate-controls-li" role="presentation">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="simulate-read-btn" onclick="read_sketch_from_amyboard();">Read from Simulator</button>
+                <button type="button" class="btn btn-primary btn-sm" id="simulate-save-btn" onclick="write_sketch_to_amyboard();">Write to Simulator</button>
+              </li>
+              <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="amyboard-controls-li" role="presentation">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="read-state-btn" onclick="read_sketch_from_amyboard();">Read from your AMYboard</button>
+                <button type="button" class="btn btn-primary btn-sm" id="save-state-btn" onclick="write_sketch_to_amyboard();"><span id="save-btn-label">Write to your AMYboard</span></button>
+              </li>
+            </ul>
+          </div>
+          <div class="tab-content pt-4">
+            <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
+              <div class="patch-layout">
+                <div class="patch-layout-header">
+                  <div class="row align-items-center patch-toolbar gx-1">
+                    <div class="col-12 col-md-auto">
+                      <select class="form-select" id="midi-channel-select" aria-label="MIDI Channel">
+                        <option value="1" selected>Channel 1</option>
+                        <option value="2">Channel 2</option>
+                        <option value="3">Channel 3</option>
+                        <option value="4">Channel 4</option>
+                        <option value="5">Channel 5</option>
+                        <option value="6">Channel 6</option>
+                        <option value="7">Channel 7</option>
+                        <option value="8">Channel 8</option>
+                        <option value="9">Channel 9</option>
+                        <option value="10">Channel 10</option>
+                        <option value="11">Channel 11</option>
+                        <option value="12">Channel 12</option>
+                        <option value="13">Channel 13</option>
+                        <option value="14">Channel 14</option>
+                        <option value="15">Channel 15</option>
+                        <option value="16">Channel 16</option>
+                      </select>
+                    </div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                      <div class="form-check ms-1">
+                        <input class="form-check-input" type="checkbox" id="channel-active-checkbox" checked />
+                        <label class="form-check-label small" for="channel-active-checkbox">Active</label>
+                      </div>
+                    </div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center ms-md-2">
+                      <button class="btn btn-sm text-white" type="button" id="patch-open-load-modal-btn" style="background-color:#2e7d32;">Load Preset</button>
+                    </div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0">
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-clear-channel-btn">Clear</button>
+                      </div>
+                    </div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center gap-2 ms-md-2">
+                      <label class="text-nowrap mb-0 text-white" id="synth-level-label" for="synth-level-slider" style="font-size:0.875rem; cursor:pointer;" title="Click to set a MIDI CC for this channel's level">Level</label>
+                      <input type="range" class="form-range" id="synth-level-slider" min="0.001" max="7" step="0.001" value="1" style="width:100px;">
+                      <input type="number" class="form-control text-center knob-value" id="synth-level-number" min="0.001" max="7" step="0.001" value="1" style="width:60px; font-size:0.7rem; padding:2px 4px;">
+                    </div>
+                  </div>
+                  <div class="patch-global-title">Effects</div>
+                </div>
+                <div class="patch-layout-body">
+                  <div class="patch-channel-panel">
+                    <div class="row g-4 knob-grid" id="knob-grid-channel"></div>
+                  </div>
+                  <div class="patch-global-panel">
+                    <div class="row g-4 knob-grid" id="knob-grid-global"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="environment-pane" role="tabpanel" aria-labelledby="environment-tab">
+              <div class="alert fixed-top d-none" id="alert_box"></div>
+              <!-- Terminal REPL — hidden by default under disclosure triangle -->
+              <details class="mb-3" id="repl-disclosure">
+                <summary class="repl-summary">Terminal REPL</summary>
+                <div class="mt-2">
+                  <div class="repl-wrap">
+                    <div id="repl-terminal"></div>
+                  </div>
+                  <button class="btn btn-sm btn-outline-secondary mt-1" onclick="replClear()">Clear</button>
+                </div>
+              </details>
+              <!-- "Help create your sketch" panel — hidden by default under disclosure triangle -->
+              <details class="mb-3" id="prompt-to-sketch-disclosure">
+                <summary class="repl-summary">Help create your sketch by describing it (alpha)</summary>
+                <div class="mt-2">
+                  <textarea id="prompt-to-sketch-input" class="form-control form-control-sm mb-1" rows="2" maxlength="500"
+                    placeholder='Describe what you want AMYboard to do, e.g. "slow ambient pad with filter cutoff controlled by MIDI CC 23", "Pass through audio input to output with a reverb effect", or "Play a DX7 patch on MIDI channel 1 and a Juno-6 patch on MIDI channel 2"'></textarea>
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-sm btn-primary" id="prompt-to-sketch-btn"
+                      onclick="generate_sketch_from_prompt()">Create or Modify your Sketch</button>
+                    <span class="small text-danger">Could change or remove your sketch. Back up your old sketch if you want to keep it.</span>
+                    <span class="small text-muted" id="prompt-to-sketch-status"></span>
+                  </div>
+                  <div class="form-check mt-2 mb-1">
+                    <input class="form-check-input" type="checkbox" id="prompt-to-sketch-share" checked>
+                    <label class="form-check-label small" for="prompt-to-sketch-share">
+                      Let others see my prompt and result.
+                      <span class="d-block text-muted" style="font-size:0.85em">We'll show your description and the resultant sketch as an example on our site for others to be inspired by.</span>
+                    </label>
+                  </div>
+                  <div class="form-text">
+                    This will create or modify a sketch.py for you if you describe what you want. Clear the editor if you want to start from scratch. We'll help you understand how to work with your AMYboard by looking up the documentation. Won't always be perfect, find us on Discord for more help!
+                  </div>
+                </div>
+              </details>
+              <div class="row g-0 headertext">
+                <div class="col-12 headertext" id="code-editor-col">
+                  <div class="d-flex align-items-center px-1">
+                    <span class="small align-middle" id="code-editor-label">sketch.py</span>
+                  </div>
+                  <section class="input">
+                    <div><textarea id="code" name="code"></textarea></div>
+                  </section>
+                </div>
+              </div>
+              <div class="row g-0 py-0 my-0 grippierow">
+                <p class="text-center grippie" id="editor_grippie">• • •</p>
+              </div>
+              <div class="row mb-4 mt-1 d-none" id="control-run-controls">
+                <div class="col-12">
+                  <div class="border rounded bg-light px-3 py-2 d-flex flex-wrap align-items-center gap-2">
+                    <span class="small fw-semibold">Sketch:</span>
+                    <button type="button" class="btn btn-sm btn-success" onclick="control_sequencer_start();">Start</button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="control_sequencer_stop();">Stop</button>
+                    <button type="button" class="btn btn-sm btn-warning" onclick="restart_sketch();">Restart</button>
+                    <span class="ms-2 small fw-semibold">Tempo:</span>
+                    <input type="number" id="tempo-input-control" class="form-control form-control-sm" style="width: 75px;" min="40" max="240" placeholder="BPM">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="set_tempo_from_ui('tempo-input-control');">Set Tempo</button>
+                  </div>
+                </div>
+              </div>
+              <div class="row mb-4 mt-1" id="run-controls">
+                <div class="col-12">
+                  <div class="border rounded bg-light px-3 py-2 d-flex flex-wrap align-items-center gap-2">
+                    <span class="small fw-semibold">Sketch:</span>
+                    <button
+                      type="button"
+                      title="Start sketch"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-success"
+                      onclick="run_current_environment()"
+                    >Start</button>
+                    <button
+                      type="button"
+                      title="Stop sketch"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-danger"
+                      onclick="stop_current_environment()"
+                    >Stop</button>
+                    <button type="button" class="btn btn-sm btn-warning" onclick="restart_sketch();">Restart</button>
+                    <span class="ms-2 small fw-semibold">Tempo:</span>
+                    <input type="number" id="tempo-input-simulate" class="form-control form-control-sm" style="width: 75px;" min="40" max="240" placeholder="BPM">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="set_tempo_from_ui('tempo-input-simulate');">Set Tempo</button>
+                  </div>
+                </div>
+              </div>
+              <div class="row mb-4 mt-1 align-items-start" id="amyboard-hardware-widgets">
+                <div class="col-6 col-md-4">
+                  <canvas id="canvas" width="256" height="256"></canvas>
+                </div>
+                <div class="col-12 col-md-4 d-flex align-items-center justify-content-center my-3 my-md-0">
+                  <div class="encoder-widget" id="encoder-widget">
+                    <button class="encoder-arrow encoder-left" id="encoder-left" title="Turn left">
+                      <svg viewBox="0 0 32 32" width="36" height="36">
+                        <path d="M22 8 A12 12 0 0 0 10 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <polygon points="7,17 10,23 13,17" fill="currentColor"/>
+                      </svg>
+                    </button>
+                    <button class="encoder-push" id="encoder-push" title="Push encoder">
+                      <span class="encoder-value" id="encoder-value">0</span>
+                    </button>
+                    <button class="encoder-arrow encoder-right" id="encoder-right" title="Turn right">
+                      <svg viewBox="0 0 32 32" width="36" height="36">
+                        <path d="M10 8 A12 12 0 0 1 22 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <polygon points="19,17 22,23 25,17" fill="currentColor"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="col-6 col-md-4">
+                  <div id="cv-knob-grid" class="row g-4"></div>
+                </div>
+              </div>
+            </div> <!-- end environment tab -->
+            <div class="tab-pane fade" id="world-pane" role="tabpanel" aria-labelledby="world-tab">
+              <p class="text-muted mb-2">Here you can see the community's shared sketches, or upload your own!</p>
+              <ul class="nav nav-tabs mb-2" id="world-sub-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active fw-bold" id="world-env-tab" data-bs-toggle="tab" data-bs-target="#world-environments-pane" type="button" role="tab" aria-controls="world-environments-pane" aria-selected="true">Sketches</button>
+                </li>
+              </ul>
+              <div class="tab-content">
+              <div class="tab-pane fade show active" id="world-environments-pane" role="tabpanel" aria-labelledby="world-env-tab">
+              <div class="row mb-2">
+                <div class="col-12">
+                  <div class="border rounded p-3 bg-light">
+                    <div class="d-flex align-items-center mb-2">
+                      <span class="fw-semibold">Sketches (latest)</span>
+                      <button
+                        type="button"
+                        title="Refresh sketches"
+                        data-toggle="tooltip"
+                        data-placement="top"
+                        class="btn btn-sm btn-link text-secondary p-0 ms-2"
+                        onclick="refresh_amyboard_world_files()"
+                      ><i class="fas fa-sync"></i></button>
+                    </div>
+                    <div class="row g-2 mb-2">
+                      <div class="col-12 col-md-7">
+                        <input
+                          type="text"
+                          id="amyboard_world_search"
+                          class="form-control form-control-sm"
+                          maxlength="100"
+                          placeholder="Search by description, filename, or username"
+                          onkeydown="if (event.key === 'Enter') { refresh_amyboard_world_files(); }"
+                        />
+                      </div>
+                      <div class="col-12 col-md-3 d-flex align-items-center">
+                        <div id="amyboard_world_tag_pills" class="d-flex flex-wrap gap-1"></div>
+                      </div>
+                      <div class="col-12 col-md-2 d-grid">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refresh_amyboard_world_files()">Search</button>
+                      </div>
+                    </div>
+                    <div id="amyboard_world_file_list" class="small" style="max-height: 360px; overflow-y: auto;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-12">
+                  <div class="border rounded p-3 bg-light">
+                    <div class="fw-semibold mb-2">Upload your Sketch</div>
+                    <div class="mb-2">This will upload your patches and code to AMYboard World for anyone to try!</div>
+                    <div class="row g-2">
+                      <div class="col-12 col-md-4">
+                        <label for="environment_username" class="form-label mb-1">Username</label>
+                        <input type="text" id="environment_username" class="small form-control" maxlength="20" placeholder="Username" />
+                        <div class="form-text">1-20 chars: A-Z, a-z, 0-9.</div>
+                      </div>
+                      <div class="col-12 col-md-4">
+                        <label for="editor_filename" class="form-label mb-1">Sketch name (no spaces!)</label>
+                        <input type="text" id="editor_filename" class="small form-control" maxlength="20" placeholder="my_sketch" />
+                        <div class="form-text">1-20 chars: A-Z, a-z, 0-9, -, _.</div>
+                      </div>
+                      <div class="col-12 col-md-4">
+                        <label for="environment_description" class="form-label mb-1">Description</label>
+                        <textarea id="environment_description" class="small form-control" maxlength="400" rows="3" placeholder="Description"></textarea>
+                        <div class="form-text">1-400 characters.</div>
+                      </div>
+                    </div>
+                    <div class="mt-2">
+                      <button type="button" id="upload_current_environment_btn" class="btn btn-sm btn-primary" onclick="upload_current_environment()">Upload</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="upgrade-pane" role="tabpanel" aria-labelledby="upgrade-tab">
+              <div class="esptool-frame-wrap">
+                <iframe
+                  class="esptool-frame"
+                  src="esptool/index.html"
+                  title="Adafruit WebSerial ESPTool"
+                  allow="serial"
+                  loading="lazy"
+                ></iframe>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="reset-pane" role="tabpanel" aria-labelledby="reset-tab">
+              <div class="border rounded p-4 bg-white mt-2" style="max-width:500px;">
+                <p class="fw-semibold mb-2">Reset to factory defaults</p>
+                <p class="text-muted small mb-3">This will delete the current sketch and patch settings and reset your AMYboard back to defaults. Are you sure?</p>
+                <button type="button" class="btn btn-danger btn-sm" onclick="reset_amyboard();">Yes, reset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- end patch / env card -->
+
+      <div class="card border-0 bg-light shadow-sm mt-3">
+        <div class="card-body">
+          <div id="amy-keyboard" class="amy-keyboard"></div>
+        </div>
+      </div>
+    </main>
+
+    <div class="modal fade" id="renameEnvironmentFileModal" tabindex="-1" aria-labelledby="renameEnvironmentFileModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="renameEnvironmentFileModalLabel">Rename file</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <label for="rename_environment_filename" class="form-label mb-1">New file name</label>
+            <input type="text" id="rename_environment_filename" class="form-control form-control-sm" />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="submit_rename_environment_file()">Rename</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="confirmEnvironmentActionModal" tabindex="-1" aria-labelledby="confirmEnvironmentActionModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirm_environment_action_title">Confirm</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p id="confirm_environment_action_body" class="mb-0"></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-sm btn-danger" id="confirm_environment_action_btn">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- "How about one of these?" — existing AMYboard World sketches similar to
+         a generate prompt, offered before a new sketch is generated. -->
+    <div class="modal fade" id="sketchSuggestionsModal" tabindex="-1" aria-labelledby="sketchSuggestionsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="sketchSuggestionsModalLabel">How about one of these?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted mb-2">Sketches already on AMYboard World that look like what you described. Click one to load it into the editor.</p>
+            <div class="row row-cols-1 row-cols-md-2 g-2" id="sketch-suggestions-list"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-primary" onclick="generate_anyway_from_suggestions()">No thanks, I still want to generate a new one</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="loadPatchModal" tabindex="-1" aria-labelledby="loadPatchModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-body py-2 px-3">
+            <button type="button" class="btn-close float-end" data-bs-dismiss="modal" aria-label="Close" style="margin:-2px -4px 0 0"></button>
+            <div id="load-patch-channel-label" style="display:none"></div>
+            <label for="load-patch-juno-presets" class="form-label mb-1 small fw-bold">Juno-6 Presets</label>
+            <div class="d-flex gap-2 align-items-center mb-2">
+              <select class="form-select form-select-sm flex-grow-1" id="load-patch-juno-presets"></select>
+              <button type="button" class="btn btn-sm btn-primary" id="load-juno-preset-btn">Load</button>
+            </div>
+            <label for="load-patch-dx7-presets" class="form-label mb-1 small fw-bold">DX-7 Presets</label>
+            <div class="d-flex gap-2 align-items-center mb-2">
+              <select class="form-select form-select-sm flex-grow-1" id="load-patch-dx7-presets"></select>
+              <button type="button" class="btn btn-sm btn-primary" id="load-dx7-preset-btn">Load</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="adminTokenModal" tabindex="-1" aria-labelledby="adminTokenModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="adminTokenModalLabel">Admin Token Required</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted mb-2">The username "shorepine" is reserved. Enter the admin token to upload.</p>
+            <input
+              type="password"
+              class="form-control form-control-sm"
+              id="admin-token-input"
+              placeholder="Admin token"
+            />
+            <div id="admin_token_error" class="text-danger small mt-1" style="display:none;"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-sm btn-primary" id="admin-token-submit-btn">Upload</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div class="container">
+        <ul class="footer-links">
+          <li>
+            <img src="img/github-mark.svg" width="20" height="20" />
+            <a href="https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/README.md">Github &amp; Docs</a>
+          </li>
+          <li>
+            <img src="img/discord-mark-black.svg" width="20" height="20" />
+            <a href="https://discord.com/invite/TzBFkUb8pG">Discord</a>
+          </li>
+          <li>
+            <img src="img/instagram-seeklogo.svg" width="20" height="20" />
+            <a href="https://instagram.com/shorepinesound">Instagram</a>
+          </li>
+          <li>
+            <a href="mailto:brian@variogram.com">Email us</a>
+          </li>
+          <li>
+            <a href="https://tulip.computer/">Tulip Creative Computer</a>
+          </li>
+        </ul>
+        <p style="margin-top:2rem; font-size:0.85rem;">
+          <img src="img/shorepine.svg" width="18" height="18" style="filter:invert(1); opacity:0.5; vertical-align:middle;" />
+          shore pine sound systems
+        </p>
+      </div>
+    </footer>
+
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/aos.js"></script>
+    <script src="js/prism.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="patches.generated.js"></script>
+    <script src="editor_knobs.js"></script>
+
+    <script>
+      AOS.init({
+        duration: 800,
+      });
+    </script>
+
+    <script>
+      // On keypress or click anywhere, start audio worklet
+      document.body.addEventListener('click', start_audio, true);
+      document.body.addEventListener('keydown', start_audio, true); 
+  
+      let scrollpos = window.scrollY;
+      const header = document.querySelector(".navbar");
+      const header_height = header.offsetHeight;
+
+      const add_class_on_scroll = () => header.classList.add("scrolled", "shadow-sm");
+      const remove_class_on_scroll = () => header.classList.remove("scrolled", "shadow-sm");
+
+      window.addEventListener("scroll", function() {
+        scrollpos = window.scrollY;
+
+        if (scrollpos >= header_height) {
+          add_class_on_scroll();
+        } else {
+          remove_class_on_scroll();
+        }
+      });
+
+      // Handle the grippie bars on the page for the editor & Tulip blocks
+      var editor_grippie_held = false;
+      var editor_grippie_y_start = 0;
+
+      $('body').on('mouseup', function mouseState(e) {
+        editor_grippie_held = false;
+      });
+      $('#editor_grippie').on('mousedown mousemove', function mouseState(e) {
+        if (e.type == "mousedown") {
+          e.preventDefault();
+          editor_grippie_held = true;
+          editor_grippie_y_start = e.clientY;
+        }
+        if(e.type == "mousemove") {
+          if(editor_grippie_held) {
+            e.preventDefault();
+            editor_height = editor_height + (e.clientY - editor_grippie_y_start);
+            if(editor_height < 200) editor_height = 200;
+            editor.setSize(null, editor_height);
+            var tc = document.getElementById('treecontainer');
+            if (tc) tc.setAttribute("style","height:"+editor_height.toString()+"px");
+          }
+        }
+      });
+
+      // Set up the tooltips
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip({delay: { "show": 3000, "hide": 500 }, trigger:'hover'})
+      }) 
+      $('[rel="tooltip"]').on('click', function () {
+        $(this).tooltip('hide')
+      });
+
+      // Handle the CV knobs
+      const cvGrid = document.getElementById("cv-knob-grid");
+      if (cvGrid && typeof init_knobs === "function") {
+        window.amy_cv_knobs = [
+          { section: "CV Input", min_value: -10, max_value: 10, display_name: "CV1", default_value: 0 },
+          { section: "CV Input", min_value: -10, max_value: 10, display_name: "CV2", default_value: 0 }
+        ];
+        init_knobs(window.amy_cv_knobs, "cv-knob-grid", function(index, value) {
+          if (typeof window.amy_cv_knob_change === "function") {
+            window.amy_cv_knob_change(index, value);
+          }
+        });
+      }
+
+      if(editor) editor.refresh();
+      editor_shown = true;
+    </script>
+    <script>
+      window.addEventListener("DOMContentLoaded", function() {
+        const environmentTab = document.getElementById("environment-tab");
+        if (environmentTab) {
+          environmentTab.addEventListener("shown.bs.tab", function() {
+            // Refresh CodeMirror when the Code tab becomes visible (it can't
+            // measure its layout while hidden in an inactive tab).
+            if (editor && typeof editor.refresh === "function") {
+              setTimeout(function() { editor.refresh(); }, 0);
+            }
+          });
+        }
+
+        const midiChannelSelect = document.getElementById("midi-channel-select");
+        const channelActiveCheckbox = document.getElementById("channel-active-checkbox");
+        function syncActiveCheckboxForChannel() {
+          if (!channelActiveCheckbox) {
+            return;
+          }
+          const active = Array.isArray(window.active_channels) ? !!window.active_channels[window.current_synth || 1] : (window.current_synth || 1) === 1;
+          channelActiveCheckbox.checked = active;
+        }
+
+        if (midiChannelSelect) {
+          midiChannelSelect.value = String(window.current_synth || 1);
+          midiChannelSelect.addEventListener("change", function() {
+            const parsed = Number(midiChannelSelect.value);
+            if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 16) {
+              window.current_synth = parsed;
+              syncActiveCheckboxForChannel();
+              syncSynthLevelForChannel();
+              refreshLoadPatchChannelLabel();
+              refreshPatchActiveNameLabel();
+              refreshSavePatchDirtyIndicator();
+              if (channelActiveCheckbox && channelActiveCheckbox.checked) {
+                if (typeof window.refresh_knobs_for_active_channel === "function") {
+                  window.refresh_knobs_for_active_channel({ sendControlMappings: false });
+                }
+              }
+              // SYNC 2: position the newly-selected channel's knobs from the knob
+              // log (+ K257 baseline). No AMY send.
+              if (typeof window.position_current_channel_from_log === "function") {
+                window.position_current_channel_from_log();
+              }
+            }
+          });
+        }
+        if (channelActiveCheckbox) {
+          channelActiveCheckbox.addEventListener("change", function() {
+            const ch = window.current_synth || 1;
+            // set_channel_active() loads the K257 default patch on the channel and
+            // positions the knobs to its defaults — nothing else to send (K257
+            // reinstalls the channel's default CC map and level on the device).
+            if (typeof window.set_channel_active === "function") {
+              window.set_channel_active(ch, channelActiveCheckbox.checked, { userToggle: true });
+            }
+          });
+        }
+        const patchLoadModalButton = document.getElementById("patch-open-load-modal-btn");
+        const loadPatchModalEl = document.getElementById("loadPatchModal");
+        const patchClearChannelButton = document.getElementById("patch-clear-channel-btn");
+        const synthLevelSlider = document.getElementById("synth-level-slider");
+        const synthLevelNumber = document.getElementById("synth-level-number");
+        const _synthLevels = {};  // per-channel level storage
+        function getSynthLevel(ch) { return _synthLevels[ch] != null ? _synthLevels[ch] : 1; }
+        function setSynthLevel(val, send) {
+          const ch = Number(window.current_synth || 1);
+          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          _synthLevels[ch] = val;
+          if (synthLevelSlider) synthLevelSlider.value = val;
+          if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+          if (send && typeof window.amy_add_log_message === "function") {
+            var code = "i" + ch + "v0a" + val.toFixed(3);
+            window.amy_add_log_message(code);
+            // Record the level in the knob log so it persists in the sketch — the
+            // dedicated slider bypasses the knob grid's send_change_code path.
+            // silent: the live send already happened above. Structural key
+            // i<ch>v0a# collapses repeats and matches a loaded line.
+            if (typeof window.send_amy_message_in_sketch === "function") {
+              window.send_amy_message_in_sketch(code, { synth: ch, silent: true });
+            }
+          }
+        }
+        function syncSynthLevelForChannel() {
+          var ch = Number(window.current_synth || 1);
+          var val = getSynthLevel(ch);
+          if (synthLevelSlider) synthLevelSlider.value = val;
+          if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+        }
+        if (synthLevelSlider) {
+          synthLevelSlider.addEventListener("input", function() { setSynthLevel(synthLevelSlider.value, true); });
+        }
+        if (synthLevelNumber) {
+          synthLevelNumber.addEventListener("change", function() { setSynthLevel(synthLevelNumber.value, true); });
+          synthLevelNumber.addEventListener("keydown", function(e) { if (e.key === "Enter") setSynthLevel(synthLevelNumber.value, true); });
+        }
+        window.syncSynthLevelForChannel = syncSynthLevelForChannel;
+        window.setSynthLevelFromAmy = function(ch, val) {
+          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          _synthLevels[ch] = val;
+          if (Number(window.current_synth || 1) === ch) {
+            if (synthLevelSlider) synthLevelSlider.value = val;
+            if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+          }
+        };
+        // Clicking the "Level" label opens the same MIDI-CC popup the knobs use,
+        // targeting the current channel's dedicated_slider "level" knob (defined
+        // in amy_parameters.js). That knob carries only the CC mapping; the slider
+        // above still drives the value.
+        const synthLevelLabel = document.getElementById("synth-level-label");
+        if (synthLevelLabel) {
+          synthLevelLabel.addEventListener("click", function() {
+            var ch = Number(window.current_synth || 1);
+            var list = (window.amy_channel_knobs && window.amy_channel_knobs[ch]) || [];
+            var levelKnob = null;
+            for (var i = 0; i < list.length; i++) {
+              if (list[i] && list[i].dedicated_slider && list[i].display_name === "level") {
+                levelKnob = list[i];
+                break;
+              }
+            }
+            if (levelKnob && typeof window.amy_open_cc_editor === "function") {
+              window.amy_open_cc_editor(levelKnob, synthLevelLabel);
+            }
+          });
+        }
+        const junoPresetsSelect = document.getElementById("load-patch-juno-presets");
+        const dx7PresetsSelect = document.getElementById("load-patch-dx7-presets");
+        const loadJunoPresetButton = document.getElementById("load-juno-preset-btn");
+        const loadDx7PresetButton = document.getElementById("load-dx7-preset-btn");
+        const loadPatchChannelLabel = document.getElementById("load-patch-channel-label");
+        const patchActiveNameEl = document.getElementById("patch-active-name");
+        function refreshPatchActiveNameLabel() { /* no-op */ }
+        window.refresh_patch_active_name_label = refreshPatchActiveNameLabel;
+        function refreshSavePatchDirtyIndicator() { /* no-op */ }
+        window.refresh_save_patch_dirty_indicator = refreshSavePatchDirtyIndicator;
+        function refreshLoadPatchChannelLabel() {
+          if (!loadPatchChannelLabel) return;
+          const channel = Number(window.current_synth || 1);
+          loadPatchChannelLabel.textContent = "Into Channel " + String(channel);
+        }
+        if (typeof init_patches_select_range === "function") {
+          init_patches_select_range("load-patch-juno-presets", 0, 128);
+          init_patches_select_range("load-patch-dx7-presets", 128, 256);
+        }
+        refreshLoadPatchChannelLabel();
+        refreshPatchActiveNameLabel();
+        refreshSavePatchDirtyIndicator();
+        if (patchLoadModalButton && loadPatchModalEl && window.bootstrap) {
+          function positionLoadPatchModalNearButton() {
+            const dialog = loadPatchModalEl.querySelector(".modal-dialog");
+            if (!dialog) return;
+            const rect = patchLoadModalButton.getBoundingClientRect();
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const dialogWidth = Math.min(360, Math.max(280, viewportWidth - 24));
+            const estimatedHeight = 160;
+            let left = rect.left;
+            if (left + dialogWidth > viewportWidth - 12) {
+              left = viewportWidth - dialogWidth - 12;
+            }
+            if (left < 12) {
+              left = 12;
+            }
+            let top = rect.bottom + 8;
+            if (top + estimatedHeight > viewportHeight - 12) {
+              top = Math.max(12, rect.top - estimatedHeight - 8);
+            }
+            dialog.style.position = "fixed";
+            dialog.style.margin = "0";
+            dialog.style.width = dialogWidth + "px";
+            dialog.style.maxWidth = dialogWidth + "px";
+            dialog.style.left = left + "px";
+            dialog.style.top = top + "px";
+            dialog.style.transform = "none";
+          }
+          patchLoadModalButton.addEventListener("click", function() {
+            refreshLoadPatchChannelLabel();
+            positionLoadPatchModalNearButton();
+            const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
+            modal.show();
+          });
+          loadPatchModalEl.addEventListener("shown.bs.modal", positionLoadPatchModalNearButton);
+          window.addEventListener("resize", function() {
+            if (loadPatchModalEl.classList.contains("show")) {
+              positionLoadPatchModalNearButton();
+            }
+          });
+          function handlePresetLoad(selectEl) {
+              const patch = Number(selectEl.value);
+              if (!Number.isInteger(patch) || patch < 0) {
+                if (typeof show_alert === "function") {
+                  show_alert("Select a preset to load.");
+                }
+                return;
+              }
+              if (typeof set_knobs_from_synth !== "function") {
+                if (typeof show_alert === "function") {
+                  show_alert("Preset load is not available.");
+                }
+                return;
+              }
+              var isDX7Preset = patch >= 128;
+              var presetSynth = Number(window.current_synth || 1);
+              try {
+                // SYNC 2: clear this synth's lines in the knob log first, then
+                // record every preset wire command we send so the preset's full
+                // patch detail (including DX7, which the visible knobs can't
+                // represent) is captured in the sketch.
+                if (typeof reset_synth_in_sketch === "function") {
+                  reset_synth_in_sketch(presetSynth);
+                }
+                // Send AMY reset + wire commands for the preset patch.
+                if (typeof amy_send === "function") {
+                  var _patchMsg;
+                  if (isDX7Preset) {
+                    // Use K (patch_number) to load the DX7 preset — AMY applies all
+                    // wire commands internally in one call, avoiding sysex races.
+                    _patchMsg = amy_send({synth: presetSynth, num_voices: 6, patch: patch}, true);
+                  } else {
+                    _patchMsg = amy_send({synth: presetSynth, num_voices: 6, patch: 257}, true);
+                  }
+                  if (typeof log_preset_message === "function") log_preset_message(presetSynth, _patchMsg);
+                  // In control mode, skip reset_global_effects — it floods sysex with
+                  // default knob values that race with the K command via sysex_message_copy.
+                  if (amyboard_mode !== 'control' && typeof reset_global_effects === "function") { reset_global_effects(); }
+                  if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
+                    var presetWireCommands = get_wire_commands_for_juno_patch(patch);
+                    for (var wi = 0; wi < presetWireCommands.length; wi++) {
+                      var _pcmd = "i" + presetSynth + presetWireCommands[wi];
+                      amy_add_log_message(_pcmd);
+                      if (typeof log_preset_message === "function") log_preset_message(presetSynth, _pcmd);
+                    }
+                  } else if (isDX7Preset) {
+                    // Apply VCF coda so analog filter controls work with DX7
+                    var _codaMsg = amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
+                    if (typeof log_preset_message === "function") log_preset_message(presetSynth, _codaMsg);
+                  }
+                  // Mark disabled panes before sending CC mappings so disabled-section
+                  // knobs don't blast initial ic updates to AMY for DX7 presets.
+                  if (typeof window.set_section_disabled === "function") {
+                    window.set_section_disabled("Osc A", isDX7Preset);
+                    window.set_section_disabled("Osc B", isDX7Preset);
+                    window.set_section_disabled("ADSR", isDX7Preset);
+                  }
+                  // In control mode, skip sending knob CC mappings — they race with the
+                  // patch load over sysex and can overwrite the K command. The hardware
+                  // doesn't need them; knob state is read back via sync_knobs_from_hardware.
+                  if (amyboard_mode !== 'control' && typeof send_all_knob_cc_mappings === "function") {
+                    send_all_knob_cc_mappings(presetSynth);
+                  }
+                }
+                // Read knob values from AMY's live synth state (async, waits
+                // for AMY to process queued deltas including VCF coda).
+                window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
+                if (typeof sync_channel_knobs_from_synth_to_ui === "function") {
+                  sync_channel_knobs_from_synth_to_ui(presetSynth).then(function() {
+                    if (typeof window.set_section_disabled === "function") {
+                      window.set_section_disabled("Osc A", isDX7Preset);
+                      window.set_section_disabled("Osc B", isDX7Preset);
+                      window.set_section_disabled("ADSR", isDX7Preset);
+                    }
+                    // Mark channel dirty after preset load so Save shows * and .dirty file is written.
+                    if (typeof schedule_dirty_autosave_for_channel === "function") {
+                      schedule_dirty_autosave_for_channel(presetSynth);
+                    }
+                  });
+                }
+              } catch (e) {
+                console.error("handlePresetLoad crashed:", e);
+              } finally {
+                const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
+                modal.hide();
+              }
+          }
+          if (loadJunoPresetButton && junoPresetsSelect) {
+            loadJunoPresetButton.addEventListener("click", function() {
+              handlePresetLoad(junoPresetsSelect);
+              // SYNC 2: no pull after a preset — the preset's wire commands are
+              // already recorded in the knob log (and sent live to the board).
+            });
+          }
+          if (loadDx7PresetButton && dx7PresetsSelect) {
+            loadDx7PresetButton.addEventListener("click", function() {
+              handlePresetLoad(dx7PresetsSelect);
+            });
+          }
+        }
+        if (patchClearChannelButton) {
+          patchClearChannelButton.addEventListener("click", async function() {
+            if (typeof window.clear_current_channel_patch !== "function") {
+              if (typeof show_alert === "function") {
+                show_alert("Clear patch is not available.");
+              }
+              return;
+            }
+            patchClearChannelButton.disabled = true;
+            try {
+              await window.clear_current_channel_patch();
+              refreshPatchActiveNameLabel();
+              refreshSavePatchDirtyIndicator();
+            } catch (e) {
+              if (typeof show_alert === "function") {
+                show_alert("Could not clear patch.");
+              }
+            } finally {
+              patchClearChannelButton.disabled = false;
+            }
+          });
+        }
+        if (typeof window.set_channel_active === "function") {
+          window.set_channel_active(1, true);
+          for (let ch = 2; ch <= 16; ch += 1) {
+            window.set_channel_active(ch, false);
+          }
+        }
+        syncActiveCheckboxForChannel();
+        const keyboard = document.getElementById("amy-keyboard");
+        if (keyboard) {
+          const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+          const flatMap = {
+            "DB": "C#",
+            "EB": "D#",
+            "GB": "F#",
+            "AB": "G#",
+            "BB": "A#"
+          };
+          const noteToMidi = function(note) {
+            if (typeof note !== "string") return null;
+            const cleaned = note.trim().toUpperCase();
+            const match = cleaned.match(/^([A-G]#?|[A-G]B)(-?\\d+)$/);
+            if (!match) return null;
+            const normalized = flatMap[match[1]] || match[1];
+            const noteIndex = noteNames.indexOf(normalized);
+            if (noteIndex < 0) return null;
+            const octave = Number(match[2]);
+            return (octave + 1) * 12 + noteIndex;
+          };
+          const freqToMidi = function(freq) {
+            if (!Number.isFinite(freq) || freq <= 0) return null;
+            return Math.round(69 + 12 * Math.log2(freq / 440));
+          };
+
+          const QwertyCtor = (window.QwertyHancock && (window.QwertyHancock.QwertyHancock || window.QwertyHancock.default)) || window.QwertyHancock;
+          if (!QwertyCtor) {
+            console.error("QwertyHancock constructor not found.");
+            return;
+          }
+          const qwerty = new QwertyCtor({
+            id: "amy-keyboard",
+            width: Math.min(900, keyboard.clientWidth || 900),
+            height: 140,
+            octaves: 2,
+            startNote: "C3",
+            musicalTyping: false,
+            whiteKeyColour: "#f8f8f8",
+            blackKeyColour: "#111",
+            activeColour: "#f2c94c",
+            borderColour: "#111"
+          });
+
+          qwerty.keyDown = function(note, freq) {
+            if (!audio_started && amyboard_mode !== 'control') return;
+            const midi = noteToMidi(note);
+            const midiFromFreq = freqToMidi(freq);
+            const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
+            if (Number.isFinite(finalMidi)) {
+              amy_send({synth: window.current_synth, vel: 1, note: finalMidi}, true);
+            }
+            if (typeof window.onKeyboardNote === "function") {
+              window.onKeyboardNote(finalMidi, note);
+            }
+          };
+
+          qwerty.keyUp = function(note, freq) {
+            const midi = noteToMidi(note);
+            const midiFromFreq = freqToMidi(freq);
+            const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
+            if (Number.isFinite(finalMidi)) {
+              amy_send({synth: window.current_synth, vel: 0, note: finalMidi}, true);
+            }
+          };
+        }
+      });
+    </script>
+  </body>
+</html>

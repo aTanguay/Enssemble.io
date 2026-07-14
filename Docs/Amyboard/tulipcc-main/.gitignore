@@ -1,0 +1,115 @@
+.DS_Store
+__pycache__
+tulip/macos/gon_config.json
+esp-idf/components/bootloader/subproject/dependencies.lock
+dependencies.lock
+tulip/esp32s3/dist
+tulip/esp32s3/build
+tulip/esp32s3/tulip-sys.bin
+tulip/esp32s3/tulip-vfs.bin
+tulip/macos/build-standard/
+tulip/macos/tulip
+tulip/macos/tulip.arm64
+tulip/macos/tulip.x86_64
+tulip/macos/dist
+tulip/macos/lextab.py
+tulip/macos/yacctab.py
+tulip/linux/build-standard
+tulip/amyrepl/build-standard
+tulip/web/build-standard
+tulip/linux/dev
+tulip/ios/build-standard
+tulip/esp32s3/managed_components
+tulip/tdeck/build
+tulip/tdeck/managed_components
+tulip/tulipcc_r10/build
+tulip/tulipcc_r10/managed_components
+.submodules_ok
+tulip/fs/tulip/ex/my_*
+tulip/fs/amboard/ex/my_*
+tulip/web/stage
+tulip/amyboardweb/stage
+tulip/amyboard/build
+tulip/amyboard/dist
+tulip/amyboard/managed_components
+tulip/amyboardweb/build-standard
+.python-version
+
+# Local secrets — never commit (e.g. CLAUDE_KEY for sketch generation)
+.env
+.env.local
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+*.pyc
+*.P
+
+# Linker output
+*.ilk
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+#*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+#*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+mpy-cross/build/genhdr/mpversion.h
+
+# KiCAD Temporary files
+
+*.000
+*.bak
+*.bck
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*-backups
+*.kicad_prl
+*.sch-bak
+*~
+_autosave-*
+*auto_saved_files*
+*.tmp
+*-save.pro
+*-save.kicad_pcb
+fp-info-cache
+*.lck

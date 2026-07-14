@@ -58,6 +58,35 @@ SH1107 128x128 OLED @ 0x3C on the Qwiic bus (SDA=17/SCL=18).*
 - [ ] (future) Modulino **Buttons** (mode/audition/panic); kit switch via MIDI Program Change;
   persist last kit in NVS
 
+### AMY synth (NSMBL_Synth) — encoder + OLED patch & parameter control ✅ (2026-07-12)
+*Drivers reused verbatim from the sampler (`i2c_bus.c` / `modulino_knob.c` / vendored `u8g2`);
+only `oled.c` draws + `ui.c` are synth-specific.*
+- [x] "Menu + edit" UI: turn scrolls Patch/Filter/Reso/Reverb/Chorus/Volume/Pan; push enters
+  EDIT; turn adjusts live; push exits.
+- [x] Patch: steps 0–255, loads live via bank `CC0` + Program Change; shows `Juno/DX7 NNN`.
+- [x] Params send their CC live (70/71/91/93/7/10) via the existing `nsmbl_midi_cc_handler`.
+- [x] UI injects `midi_event_t` into `midi_queue` — no `synth_engine.c` change, single AMY consumer.
+- [x] Running-status BLE parser ported here too (separate commit).
+- [x] **HW-verified**: menu renders + scrolls; EDIT Filter sweeps the sound live over BLE.
+- [ ] (watch) app image at ~93% full (AMY + u8g2) — bump partition / trim u8g2 if it grows.
+- [ ] (future) shared driver component across all 3 variants; patch-name table; NVS persist;
+  Modulino Buttons; reconcile host-sent CCs with on-screen values.
+
+### Garee (NSMBL_Bridge) — encoder routing + OLED MIDI monitor ✅ (2026-07-12)
+*3rd and last AMYboard to get the UI — the fleet is complete. Drivers reused verbatim.*
+- [x] `bridge_state.c` — runtime `BRIDGE_IN`/`BRIDGE_OUT` (seeded from config) + monitor state,
+  shared across parse/forward/UI via a short `portMUX`.
+- [x] OLED monitor: `IN→OUT` header (active field boxed), last-note, IN/OUT activity dots,
+  forwarded-note counter. Turn edits active field; push toggles IN/OUT.
+- [x] Wire-ins: `ble_midi.c` live IN filter + record received; `bridge_task` live OUT + record forwarded.
+- [x] **HW-verified**: dots flash on notes, knob re-routes live, DIN gear responds (knob at alt 0x3A).
+
+### Now the natural cleanup — shared driver component
+- [ ] **Factor `i2c_bus` / `modulino_knob` / `oled` (+ vendored `u8g2`) into ONE shared component**
+  referenced by all three variants (`EXTRA_COMPONENT_DIRS`), killing the 3× copy-paste before it drifts.
+- [ ] Flash the synth UI with per-member configs (Eenoo/Prynz/Botsee).
+- [ ] (future) NVS-persist: last kit (sampler), last patch/params (synth), last routing (bridge).
+
 ## Phase 2b — XIAO Platform (In Progress)
 
 ### Done

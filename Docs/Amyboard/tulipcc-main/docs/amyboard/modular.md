@@ -1,0 +1,166 @@
+# Modular Synth Setup
+
+AMYboard is designed to integrate directly with Eurorack and other modular synth systems. It has a 10-pin modular power connector, analog CV inputs and outputs, MIDI I/O, and an I2C bus for expansion. 
+
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/assets/img/amyboard_modular_2.jpg" width=600>
+
+## Accessories
+
+You can add an optional [OLED screen or knob](accessories.md) yourself by just connecting them to the I2C port on the front of the AMYboard. 
+
+Your AMYboard ships with a plexiglass "front panel" with cutouts for the jacks and an optional screen and knob. The panel can be attached to the AMYboard through the jack screws. The front panel then screws into your Eurorack case. 
+
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/assets/img/amyboard_bambu.png" width=600>
+
+You can also 3D print your own front panel for whatever use case you have in mind! [You can grab a BambuLab 3MF file here](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Or build from the front panel [DXF file](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.dxf), [EPS Vector File](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.eps) or [SVG vector file](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.svg).
+
+
+## 10vpp Operation
+
+Most modular synthesis units operate at 10Vpp, where an audio signal swings between -5V and +5V. Out of the box, AMYboard is "line level" at 1Vpp. To change the audio input and output of AMYboard to 10Vpp, you need to change the DIP switches on the back of the board to "ON" / closed.
+
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/assets/img/dip_switches.png" width=600>
+
+ - **Switches 1 & 2** (input): When closed, attenuate the inputs -- making line in friendly to 10Vpp Eurorack signals.
+ - **Switches 3 & 4** (output): When closed, increase the gain of the output buffer -- making line out more friendly to 10Vpp Eurorack.
+
+## CV outputs
+
+AMYboard has **two CV outputs** on 3.5mm jacks, powered by a GP8413 12-bit DAC (I2C address `0x58`). The outputs range from approximately **-10V to +10V**, suitable for controlling Eurorack pitch, filter cutoff, or any CV-controlled parameter.
+
+```python
+import amyboard
+
+# Output 3.3V on CV out 1
+amyboard.cv_out(3.3, channel=0)
+
+# Output -5V on CV out 2
+amyboard.cv_out(-5.0, channel=1)
+```
+
+You can route an entire AMY synth's audio to a CV output using `set_cv_out`. The synth's audio is silenced from the speakers and sent to the DAC instead, so you can use any AMY waveform as a CV source:
+
+```python
+import amy, amyboard
+
+# Create a synth (num_voices + oscs_per_voice define it) and route it to CV1
+amy.send(synth=5, num_voices=1, oscs_per_voice=1, wave=amy.SAW_DOWN, vel=1, freq=0.5)
+amyboard.set_cv_out(channel=0, synth=5)
+```
+
+This sends a 0.5Hz saw wave out CV1 at full range (-10V to +10V). You can change the waveform, frequency, or amplitude at any time with `amy.send(synth=5, ...)`.
+
+> **The first `amy.send` must actually create the synth.** A synth only exists once it has voices, so the creating command needs `num_voices` **and** `oscs_per_voice` (or a `patch`, which supplies `oscs_per_voice` for you). Without them the synth is never allocated — `set_cv_out` then has no oscillators to read and the CV output never changes.
+
+To stop it, release the note or clear the mapping:
+
+```python
+amyboard.set_cv_out(channel=0, synth=0)  # clear the CV mapping
+```
+
+
+### Use cases
+
+ - **Pitch CV**: Output 1V/oct pitch voltages to control an external oscillator
+ - **Modulation**: Generate LFOs, envelopes, or sequenced voltages in Python
+ - **Sample & hold**: Read a value, process it, and output the result
+
+
+## CV inputs
+
+AMYboard has **two CV inputs** on 3.5mm jacks, powered by an ADS1015 12-bit ADC (I2C address `0x48`). They accept **-10V to +10V**.
+
+```python
+import amyboard
+
+# Read voltage on CV in 1
+volts = amyboard.cv_in(channel=0)
+print(f"CV in 1: {volts:.2f}V")
+
+# Read raw ADC value
+raw = amyboard.ads1015_raw(channel=0)
+```
+
+### CV triggering
+
+You can generate AMY events by setting wire-code commands to be issued in response to CV input transitions (rising or falling):
+
+```
+amy.send(cv_trigger='<CV>,<V_TRIG>,<V_RESET>[,<PITCH_CV>,<SCALE>,<OFFSET>],<WIRE_COMMAND_TEMPLATE>')
+```
+where `<CV>` is the CV input to watch, `<V_TRIG>` is the voltage at which the event is triggered, and `<V_RESET>` is the voltage at which the event is "armed".  If `<V_TRIG>` is higher than `<V_RESET>`, then it is a rising voltage that triggers the event, otherwise it is a falling voltage.
+
+The optional `<PITCH_CV>` is a second CV channel to sample on trigger to obtain a "pitch" voltage.  Its voltage is multiplied by `<SCALE>` and then has `<OFFSET>` added to obtain a "pitch" value which is substituted for `%v` in the wire command template.
+
+`<WIRE_COMMAND_TEMPLATE>` is an AMY wire command that, when the event triggers, is substituted with `%v`, then issued.
+
+To have CV 0 trigger a note on synth 1 (with e.g. 0 to 5V transitions), and CV 1 control pitch (at 1V per octave), the setup would be:
+
+```
+amy.send(cv_trigger='0,3.0,2.0,1,1.0,0.0,i1l1n%v')   # note-on when CV0 passes 3.0V moving upwards
+amy.send(cv_trigger='0,2.0,3.0,i1l0')                # note-off when CV0 passes 2.0V moving downwards
+```
+
+CV trigger events stack - in the example above, we've associated two events with CV in 0, one for note-on, and one for note-off.  To clear all the events associated with a particular CV input, send an empty command:
+```
+amy.send(cv_trigger='0')   # Clear all triggers associated with CV input 0.
+```
+
+Instead of sampling a single pitch value at onset time, you can instead make your osc pitches respond to CV1 dynamically (like a traditional pitch CV-in):
+```
+amy.send(synth=1, patch=1, num_voices=1)    # Monophonic JUNO patch
+amy.send(synth=1, osc=2, freq={'ext1':1})   # Set all 3 pitched oscillators to track CV1
+amy.send(synth=1, osc=3, freq={'ext1':1})
+amy.send(synth=1, osc=4, freq={'ext1':1})
+amy.send(cv_trigger='0,3,2,i1l1n69')  # CV0 trigger sends a note-on for A4, but actual pitch will include CV1
+amy.send(cv_trigger='0,2,3,i1l0')     # CV0 note-off trigger.
+```
+
+Note: The CV_IN has 12 bit resolution for a 20-volt range, which corresponds to a minimum step of around 6 cents — sometimes too coarse for fine vibrato via CV pitch modulation.
+
+### Use cases
+
+ - **External CV to AMY**: Map incoming CV to synth parameters (filter, pitch, amplitude)
+ - **Gate detection**: Read a gate signal and trigger AMY notes
+ - **Sensor input**: Connect any voltage source (-10V to +10V range) and read it from Python
+
+### Example: CV input controls AMY filter with CtrlCoefs
+
+AMY's CtrlCoef system lets you map CV inputs directly to synth parameters without any Python polling loop. For frequency parameters like `filter_freq`, CtrlCoefs work in **log2 (1V/oct) space** -- the `const` value sets a center frequency in Hz, and the `ext0` coefficient scales how many octaves the CV shifts per volt.
+
+The formula for the final frequency is:
+
+```
+freq = const * 2^(ext0 * cv_voltage)
+```
+
+So to sweep a low-pass filter between roughly 100 Hz and 1000 Hz using CV input 1 (-10V to +10V):
+
+1. Pick the **geometric center** of your range: `sqrt(100 * 1000) ≈ 316 Hz`
+2. Solve for `ext0`: you need `316 * 2^(ext0 * 10) = 1000`, so `ext0 = log2(1000/316) / 10 ≈ 0.166`
+
+In practice, round numbers like `const=300, ext0=0.15` get you close (roughly 106 Hz to 849 Hz):
+
+```python
+import amy
+
+# Set up a saw wave with a CV-controlled low-pass filter
+amy.send(synth=1, wave=amy.SAW_DOWN)
+amy.send(synth=1, filter_freq={'const': 300, 'ext0': 0.15}, filter_type=amy.FILTER_LPF24)
+
+# Play a note -- the filter cutoff now tracks CV in 1
+amy.send(synth=1, vel=1, note=48)
+```
+
+With nothing patched to CV in 1 (0V), the filter sits at 300 Hz. Patch in a modular LFO or envelope and the cutoff sweeps exponentially -- just like a hardware filter with a 1V/oct CV input.
+
+For exact 100–1000 Hz range, use `'const': 316, 'ext0': 0.166`. For a wider sweep (e.g. 50–5000 Hz), increase `ext0`:
+
+```python
+# Wider sweep: geometric center ~500 Hz, ±10V covers 50 to 5000 Hz
+amy.send(synth=1, filter_freq={'const': 500, 'ext0': 0.33}, filter_type=amy.FILTER_LPF24)
+```
+
+
+[Back to Getting Started](README.md)
+

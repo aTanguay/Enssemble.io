@@ -1,0 +1,331 @@
+#include <stdio.h>
+#include <inttypes.h>
+#include <string.h>
+#include "amy.h"
+
+// Stuff just for amyboard -- cv in/out direct , i2c in/out
+
+#ifdef ESP_PLATFORM
+#include "sdkconfig.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/message_buffer.h"
+#include "esp_chip_info.h"
+#include "esp_flash.h"
+#include "esp_system.h"
+#include "esp_task.h"
+#include "driver/i2c.h"
+#include "freertos/queue.h"
+#include "freertos/event_groups.h"
+#include "esp_log.h"
+#include "esp_err.h"
+#include "driver/i2s_std.h"
+
+
+#include "pins.h"
+
+
+TaskHandle_t i2c_check_for_data_handle;
+
+
+#define AMY_I2C_CHECK_FOR_DATA_TASK_COREID (1)
+#define ALLES_I2C_CHECK_FOR_DATA_TASK_PRIORITY (ESP_TASK_PRIO_MAX-1)
+#define ALLES_I2C_CHECK_FOR_DATA_TASK_NAME "amyboard_i2c"
+#define ALLES_I2C_CHECK_FOR_DATA_TASK_STACK_SIZE (16 * 1024)
+
+
+// i2c stuff
+#define I2C_CLK_FREQ 400000
+#define DATA_LENGTH MAX_MESSAGE_LEN
+#define _I2C_NUMBER(num) I2C_NUM_##num
+#define I2C_NUMBER(num) _I2C_NUMBER(num)
+#define I2C_FOLLOWER_NUM I2C_NUMBER(1) /*!< I2C port number for follower dev */
+#define I2C_FOLLOWER_TX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C follower tx buffer size */
+#define I2C_FOLLOWER_RX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C follower rx buffer size */
+
+#define AMYCHIP_ADDR 0x3F
+#define PCM9211_ADDR 0x40
+#define ADS1015_ADDR 0x48
+#define GP8413_ADDR  0x58
+
+esp_err_t i2c_follower_init() {
+    i2c_port_t i2c_follower_port = I2C_FOLLOWER_NUM;
+    i2c_config_t conf_follower;
+    conf_follower.sda_io_num = I2C_FOLLOWER_SDA;
+    conf_follower.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    conf_follower.scl_io_num = I2C_FOLLOWER_SCL;
+    conf_follower.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    conf_follower.mode = I2C_MODE_SLAVE;
+    conf_follower.slave.addr_10bit_en = 0;
+    conf_follower.slave.slave_addr = AMYCHIP_ADDR;
+    conf_follower.slave.maximum_speed = I2C_CLK_FREQ; // expected maximum clock speed
+    conf_follower.clk_flags =0;
+    i2c_param_config(i2c_follower_port, &conf_follower);
+    return i2c_driver_install(i2c_follower_port, conf_follower.mode,
+                            I2C_FOLLOWER_RX_BUF_LEN, I2C_FOLLOWER_TX_BUF_LEN, 0);
+}
+
+
+uint8_t i2c_buffer[MAX_MESSAGE_LEN];
+
+void i2c_check_for_data() {
+    while(1) {
+        size_t size = i2c_slave_read_buffer(I2C_FOLLOWER_NUM, i2c_buffer, MAX_MESSAGE_LEN, 10 / portTICK_PERIOD_MS);
+        if(size>0) {
+            i2c_buffer[size] = 0;
+            //fprintf(stderr, "%s\n", i2c_buffer);
+            amy_add_message((char*)i2c_buffer);
+        }
+    }
+}
+
+
+
+// ---------------------------------------------------------------------------
+// Background I2C write queue.  The OLED framebuffer flush takes ~200ms of bus
+// time at 400kHz; done synchronously from MicroPython it froze Python (and
+// starved the CV tasks' port mutex) for that long.  Python instead enqueues
+// each transaction here and returns immediately; this low-priority task plays
+// them out in order on I2C_NUM_0.  The legacy IDF driver's per-port mutex
+// serializes us against machine.I2C and the CV read/write hooks, and because
+// Python chunks large payloads into small transactions, those users interleave
+// between chunks instead of timing out.  Single producer (the MicroPython
+// task) / single consumer (this task), which is all a MessageBuffer allows.
+
+#define I2C_BG_QUEUE_BYTES 16384      // > one full 8KB OLED frame incl. overhead
+#define I2C_BG_MAX_PAYLOAD 1024       // per-transaction cap (Python sends ~256B)
+#define I2C_BG_TASK_STACK_SIZE 4096
+#define I2C_BG_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)  // same as cv_read_task
+#define I2C_BG_TASK_COREID (0)                        // MicroPython runs on core 1
+
+static MessageBufferHandle_t i2c_bg_mb = NULL;
+static volatile uint32_t i2c_bg_errors_count = 0;
+static volatile uint8_t i2c_bg_in_flight = 0;
+
+static void i2c_bg_task(void *pvParameter) {
+    static uint8_t msg[I2C_BG_MAX_PAYLOAD + 1];  // [addr][payload...]
+    for(;;) {
+        size_t n = xMessageBufferReceive(i2c_bg_mb, msg, sizeof(msg), portMAX_DELAY);
+        if(n < 2) continue;
+        i2c_bg_in_flight = 1;
+        esp_err_t ret = i2c_master_write_to_device(I2C_NUM_0, msg[0], msg + 1, n - 1, pdMS_TO_TICKS(100));
+        i2c_bg_in_flight = 0;
+        if(ret != ESP_OK) i2c_bg_errors_count++;
+    }
+}
+
+// Enqueue one I2C write transaction. Returns 0 on success, 1 if it had to be
+// dropped (queue stayed full / payload too big) -- the failure also bumps
+// i2c_bg_errors() so Python can schedule a full panel resync.
+uint8_t amyboard_i2c_bg_write(uint8_t addr, const uint8_t *buf, uint32_t len) {
+    // Only ever called from the MicroPython task (single producer).
+    static uint8_t msg[I2C_BG_MAX_PAYLOAD + 1];
+    if(len == 0 || len > I2C_BG_MAX_PAYLOAD) {
+        i2c_bg_errors_count++;
+        return 1;
+    }
+    if(i2c_bg_mb == NULL) {
+        i2c_bg_mb = xMessageBufferCreate(I2C_BG_QUEUE_BYTES);
+        xTaskCreatePinnedToCore(i2c_bg_task, "i2c_bg", I2C_BG_TASK_STACK_SIZE / sizeof(StackType_t),
+                                NULL, I2C_BG_TASK_PRIORITY, NULL, I2C_BG_TASK_COREID);
+    }
+    msg[0] = addr;
+    memcpy(msg + 1, buf, len);
+    // Blocking here is backpressure: it only happens when more than a whole
+    // queued frame is outstanding, and it bounds how far Python can run ahead.
+    if(xMessageBufferSend(i2c_bg_mb, msg, len + 1, pdMS_TO_TICKS(500)) != len + 1) {
+        i2c_bg_errors_count++;
+        return 1;
+    }
+    return 0;
+}
+
+// Bytes still queued (plus any transaction currently on the wire); 0 == idle.
+uint32_t amyboard_i2c_bg_pending(void) {
+    if(i2c_bg_mb == NULL) return 0;
+    uint32_t queued = I2C_BG_QUEUE_BYTES - (uint32_t)xMessageBufferSpacesAvailable(i2c_bg_mb);
+    return queued + i2c_bg_in_flight;
+}
+
+uint32_t amyboard_i2c_bg_errors(void) {
+    return i2c_bg_errors_count;
+}
+
+#define ADS1015_REGISTER_CONFIG (0x01)
+#define ADS1015_CQUE_DISABLE (0x0003)
+
+#define ADS1015_CLAT_NONLAT (0x0000)
+#define ADS1015_CPOL_ACTVLOW (0x0000)
+#define ADS1015_CMODE_TRAD (0x0000)
+#define ADS1015_DR_3300SPS (0x00E0)  // 0x00E0 = 3300 SPS (max) on the ADS1015
+#define ADS1015_MODE_SINGLE (0x0100)
+#define ADS1015_MODE_CONT (0x0100)
+#define ADS1015_OS_SINGLE (0x8000)  // initiate single conversion / check converter status
+#define ADS1015_OS_READY (0x8000) // OS bit reads 1 when conversion is complete
+#define ADS1015_PGA_2_048V (0x0400)
+//#define ADS1015_PGA_4_096V (0x0200)
+#define ADS1015_MUX_SINGLE_0 (0x4000)
+//#define ADS1015_MUX_PER_CHAN (0x1000)
+// To get the offset to ADS1015_MUX_SINGLE_0 for chan C, use (C << ADS1015_MUX_CHAN_SHIFTL)
+#define ADS1015_MUX_CHAN_SHIFTL (12)
+//#define ADS1015_MUX_SINGLE_1 (0x5000)
+//#define ADS1015_MUX_SINGLE_2 (0x6000)
+//#define ADS1015_MUX_SINGLE_3 (0x7000)
+#define ADS1015_REGISTER_CONVERT (0x00)
+
+static esp_err_t ads1015_write_register(uint8_t reg, uint16_t data) {
+    i2c_cmd_handle_t cmd;
+    esp_err_t ret;
+    uint8_t out[2];
+
+    out[0] = data >> 8; // get 8 greater bits
+    out[1] = data & 0xFF; // get 8 lower bits
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd); // generate a start command
+    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_WRITE,1); // specify address and write command
+    i2c_master_write_byte(cmd,reg,1); // specify register
+    i2c_master_write(cmd,out,2,1); // write it
+    i2c_master_stop(cmd); // generate a stop command
+    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+static esp_err_t ads1015_read_register(uint8_t reg, uint8_t* data, uint8_t len) {
+    i2c_cmd_handle_t cmd;
+    esp_err_t ret;
+
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_WRITE,1);
+    i2c_master_write_byte(cmd,reg,1);
+    i2c_master_stop(cmd);
+    i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10));
+    i2c_cmd_link_delete(cmd);
+
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd); // generate start command
+    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_READ,1); // specify address and read command
+    i2c_master_read(cmd, data, len, 0); // read all wanted data
+    i2c_master_stop(cmd); // generate stop command
+    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+static int ads1015_pending_channel = -1;
+
+void ads1015_start_conversion(uint8_t channel) {
+    uint16_t channel_mux = ADS1015_MUX_SINGLE_0 + (channel << ADS1015_MUX_CHAN_SHIFTL);
+    uint16_t data = (ADS1015_CQUE_DISABLE | ADS1015_CLAT_NONLAT |
+                     ADS1015_CPOL_ACTVLOW | ADS1015_CMODE_TRAD | ADS1015_DR_3300SPS |
+                     ADS1015_MODE_SINGLE | ADS1015_OS_SINGLE | ADS1015_PGA_2_048V |
+                     channel_mux);
+    ads1015_write_register(ADS1015_REGISTER_CONFIG, data);
+    ads1015_pending_channel = channel;
+}
+
+uint16_t ads1015_get_result(void) {
+    // Wait for the single-shot conversion on the last-selected mux channel to
+    // finish before reading the result. The OS bit reads 0 while converting and
+    // 1 when done; at 3300 SPS each conversion takes ~0.3ms. Without this wait the
+    // CONVERT register still holds the *previous* conversion (the other channel),
+    // which made cv_in(0) and cv_in(1) return the same input. Bound the poll so a
+    // missing/unresponsive ADC can't stall the cv_read_task forever.
+    uint8_t buffer[2];
+    for(int i = 0; i < 20; i++) {
+        if(ads1015_read_register(ADS1015_REGISTER_CONFIG, buffer, 2) != ESP_OK) break;
+        if((((uint16_t)buffer[0] << 8) | buffer[1]) & ADS1015_OS_READY) break; // conversion done
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+    ads1015_read_register(ADS1015_REGISTER_CONVERT, buffer, 2);
+    return ((uint16_t)buffer[0] << 8) | (uint16_t)buffer[1];
+}
+
+uint16_t read_ads1015_raw(uint8_t channel) {
+    if (channel != ads1015_pending_channel)
+        ads1015_start_conversion(channel);
+    uint16_t result = ads1015_get_result();
+    // Speculatively start conversion on the other channel.  Assumes we're just using channels 0 and 1.
+    ads1015_start_conversion((channel + 1) % 2);
+    return result;
+}
+
+
+#endif // ESP_PLATFORM
+
+extern uint8_t * external_map;
+float cv_local_value[2];
+uint8_t cv_local_override[2];
+
+// Cached CV input values — updated by a dedicated FreeRTOS task so the
+// audio render thread never blocks on I2C.
+float cv_cached_value[2] = {0, 0};
+
+// Called from the coef hook on the audio thread — just returns the cached value.
+float cv_input_hook(uint16_t channel) {
+    if(cv_local_override[channel]) {
+        return cv_local_value[channel];
+    }
+    return cv_cached_value[channel];
+}
+
+#ifdef ESP_PLATFORM
+// FreeRTOS task: reads both ADS1015 channels in a loop, updates cv_cached_value.
+void cv_read_task(void *pvParameter) {
+    int32_t min = 1058;  // -5V
+    int32_t max = 21312; // 5V
+    // Scan both CV channels once per AMY audio block (AMY_BLOCK_SIZE / AMY_SAMPLE_RATE,
+    // ~5.8ms at 256/44100) so CV tracks the audio block cadence. Expressed in RTOS ticks,
+    // rounded to nearest, so it follows the audio rate regardless of tick rate; clamped to
+    // >=1 tick. (At configTICK_RATE_HZ=1000 this is 6 ticks; 5.8ms can't be hit exactly.)
+    TickType_t cv_period = (AMY_BLOCK_SIZE * configTICK_RATE_HZ + AMY_SAMPLE_RATE / 2) / AMY_SAMPLE_RATE;
+    if(cv_period == 0) cv_period = 1;
+    // xTaskDelayUntil holds a fixed period regardless of how long the two ADS1015
+    // conversions take, unlike vTaskDelay which would add the read time on top.
+    TickType_t last_wake = xTaskGetTickCount();
+    for(;;) {
+        for(uint8_t ch = 0; ch < 2; ch++) {
+            if(!cv_local_override[ch]) {
+                int32_t raw = read_ads1015_raw(ch);  // Put uint16_t into int32_t.
+                cv_cached_value[ch] = (
+                    (((float)(raw - min))
+                     / ((float)(max - min)))
+                    * 10.0
+                ) - 10.0;
+            }
+        }
+        xTaskDelayUntil(&last_wake, cv_period);
+    }
+}
+#endif
+
+// Write to the GP8413
+uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
+    if(external_map[osc]==1 || external_map[osc]==2) {
+#ifdef ESP_PLATFORM
+        // -5v to +5v? 
+        float volts = S2F(buf[0])*5.0;
+        int32_t val = (int32_t)(((volts + 10)/20.0) * 0x8000);
+        if(val < 0) val = 0;
+        if(val > 0x7fff) val = 0x7fff;
+        uint8_t bytes[3];
+        bytes[2] = (val & 0xff00) >> 8;
+        bytes[1] = (val & 0x00ff);
+        uint8_t ch = 0x02;
+        uint8_t addr = 88;
+        uint8_t channel = external_map[osc]-1;
+        if(channel == 1) ch = 0x04;
+        bytes[0] = ch;
+        i2c_master_write_to_device(I2C_NUM_0, addr, bytes, 3, pdMS_TO_TICKS(10));
+        // silence this output
+        return 1;
+#endif
+        return 0;
+    } else if(external_map[osc]>2) { // python audio buffer callback, WIP
+        
+        return 0;
+    } 
+    return 0;
+}
+

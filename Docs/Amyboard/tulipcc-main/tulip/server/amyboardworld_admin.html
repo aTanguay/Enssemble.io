@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>World Admin</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; margin: 24px; color: #1f2937; }
+    h1 { margin: 0 0 12px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
+    input, button, textarea, select { font-size: 14px; padding: 6px 8px; }
+    input[type="text"], textarea { min-width: 240px; }
+    .small { font-size: 12px; color: #6b7280; }
+    .panel { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; vertical-align: top; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .ok { color: #065f46; }
+    .err { color: #991b1b; }
+    .tags { width: 220px; }
+    .desc { max-width: 400px; }
+    pre.code { white-space: pre-wrap; max-width: 640px; max-height: 320px; overflow: auto; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; margin: 4px 0 0; font-size: 12px; }
+    details summary { cursor: pointer; }
+    .scroll-table { max-height: 60vh; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; }
+    .scroll-table table { margin: 0; }
+    .scroll-table thead th { position: sticky; top: 0; background: #fff; box-shadow: inset 0 -1px 0 #e5e7eb; z-index: 1; }
+  </style>
+</head>
+<body>
+  <h1>World Admin</h1>
+  <div class="small">Unified moderation UI for AMYboard files, Tulip files, and Tulip messages.</div>
+
+  <div class="panel">
+    <div class="row">
+      <label for="adminToken"><strong>Admin token</strong></label>
+      <input id="adminToken" type="text" placeholder="x-admin-token" />
+      <button id="saveTokenBtn" type="button">Save token</button>
+      <span class="small">Stored in this browser's localStorage.</span>
+    </div>
+    <div class="row">
+      <label for="scope">Scope</label>
+      <select id="scope">
+        <option value="all">All</option>
+        <option value="amyboard_files">AMYboard files</option>
+        <option value="tulip_files">Tulip files</option>
+        <option value="tulip_messages">Tulip messages</option>
+      </select>
+      <label for="q">Search</label>
+      <input id="q" type="text" placeholder="username / filename / text" />
+      <button id="refreshBtn" type="button">Refresh</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Upload File</h3>
+    <div class="row">
+      <select id="uploadScope">
+        <option value="amyboardworld">AMYboard file</option>
+        <option value="tulipworld">Tulip file</option>
+      </select>
+      <input id="uploadUser" type="text" placeholder="username" maxlength="20" />
+      <input id="uploadDesc" type="text" placeholder="description" maxlength="400" />
+      <input id="uploadFile" type="file" accept=".tar" />
+      <button id="uploadBtn" type="button">Upload</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Post Tulip Message</h3>
+    <div class="row">
+      <input id="msgUser" type="text" placeholder="username" maxlength="20" />
+      <input id="msgText" type="text" placeholder="message" maxlength="800" />
+      <button id="msgBtn" type="button">Post</button>
+    </div>
+  </div>
+
+  <div id="status" class="small"></div>
+
+  <div class="panel">
+    <div class="scroll-table">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Who / Name</th>
+          <th>Description / Message</th>
+          <th>Tags</th>
+          <th>When</th>
+          <th>Size</th>
+          <th>IP</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <h3 style="margin:0">Sketch generations</h3>
+      <input id="genQ" type="text" placeholder="filter prompt / code" />
+      <input id="genIp" type="text" placeholder="filter IP" />
+      <button id="genRefreshBtn" type="button">Refresh generations</button>
+    </div>
+    <div class="small">"Prompt to sketch" audit log (newest first). Output code is captured going forward.</div>
+    <div class="scroll-table">
+    <table>
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>IP</th>
+          <th>Prompt</th>
+          <th>OK</th>
+          <th>Share</th>
+          <th>Uploaded</th>
+          <th>Model</th>
+          <th>Tokens (in/out)</th>
+          <th>Output code</th>
+        </tr>
+      </thead>
+      <tbody id="genRows"></tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <h3 style="margin:0">Debug: prompt &rarr; code</h3>
+      <span class="small">Admin only &middot; no character cap &middot; no rate limit &middot; runs the live AMY sketch generator &middot; spends API credits &middot; not logged.</span>
+    </div>
+    <textarea id="dbgPrompt" rows="4" style="width:100%;box-sizing:border-box" placeholder="Enter any prompt (no length limit)&hellip;"></textarea>
+    <details>
+      <summary class="small">Optional: current sketch (debug edit mode)</summary>
+      <textarea id="dbgCurrent" rows="6" style="width:100%;box-sizing:border-box" placeholder="(optional) existing sketch.py to modify"></textarea>
+    </details>
+    <div class="row">
+      <button id="dbgRunBtn" type="button">Generate</button>
+      <span id="dbgMeta" class="small"></span>
+    </div>
+    <pre class="code" id="dbgOut" style="max-width:none;max-height:480px"></pre>
+  </div>
+
+<script>
+(function() {
+  const status = document.getElementById('status');
+  const rows = document.getElementById('rows');
+  const adminTokenEl = document.getElementById('adminToken');
+  const qEl = document.getElementById('q');
+  const scopeEl = document.getElementById('scope');
+
+  function setStatus(msg, isError) {
+    status.textContent = msg || '';
+    status.className = 'small ' + (isError ? 'err' : 'ok');
+  }
+
+  function getToken() {
+    return (adminTokenEl.value || '').trim();
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
+  function fmtTs(ms) {
+    const n = Number(ms || 0);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    return new Date(n).toLocaleString();
+  }
+
+  function fmtSize(b) {
+    const n = Number(b || 0);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  async function api(path, opts) {
+    const res = await fetch(path, opts);
+    let body = null;
+    try { body = await res.json(); } catch (_) {}
+    if (!res.ok) {
+      const detail = body && body.detail ? body.detail : ('HTTP ' + res.status);
+      throw new Error(detail);
+    }
+    return body;
+  }
+
+  async function refresh() {
+    setStatus('Loading...', false);
+    const token = getToken();
+    if (!token) {
+      setStatus('Admin token required', true);
+      rows.innerHTML = '';
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('limit', '250');
+    params.set('scope', scopeEl.value);
+    const q = (qEl.value || '').trim();
+    if (q) params.set('q', q);
+
+    try {
+      const data = await api('/api/admin/items?' + params.toString(), {
+        headers: { 'x-admin-token': token },
+      });
+      const items = Array.isArray(data.items) ? data.items : [];
+      rows.innerHTML = '';
+      for (const item of items) {
+        const tr = document.createElement('tr');
+        const tags = Array.isArray(item.tags) ? item.tags.join(',') : '';
+        const kind = item.kind === 'message' ? 'message' : 'file';
+        const scope = item.scope || '';
+        const desc = kind === 'message' ? (item.content || '') : (item.description || item.content || '');
+        const who = kind === 'message'
+          ? '<div><strong>' + esc(item.username) + '</strong></div>'
+          : '<div><strong>' + esc(item.username) + '</strong></div><div class="mono">' + esc(item.filename || '') + '</div>';
+
+        tr.innerHTML = '' +
+          '<td class="mono">' + esc(item.id) + '</td>' +
+          '<td><span class="mono">' + esc(scope + ':' + kind) + '</span></td>' +
+          '<td>' + who + '</td>' +
+          '<td class="desc">' + esc(desc) + '</td>' +
+          '<td>' + (kind === 'file' ? '<input class="tags" type="text" value="' + esc(tags) + '" data-role="tags" />' : '') + '</td>' +
+          '<td>' + esc(fmtTs(item.time)) + '</td>' +
+          '<td>' + esc(fmtSize(item.size)) + '</td>' +
+          '<td class="mono small">' + esc(item.client_ip || '') + '</td>' +
+          '<td>' +
+            (kind === 'file' && item.download_url ? '<a href="' + esc(item.download_url) + '"><button type="button">Download</button></a> ' : '') +
+            (kind === 'file' ? '<button type="button" data-role="save-tags">Save tags</button> ' : '') +
+            '<button type="button" data-role="delete">Delete</button>' +
+          '</td>';
+
+        if (kind === 'file') {
+          tr.querySelector('[data-role="save-tags"]').addEventListener('click', async () => {
+            const input = tr.querySelector('[data-role="tags"]');
+            const tagStr = (input.value || '').trim();
+            const tagsArr = tagStr ? tagStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const path = scope === 'tulipworld'
+              ? '/api/tulipworld/files/' + encodeURIComponent(item.id) + '/tags'
+              : '/api/amyboardworld/files/' + encodeURIComponent(item.id) + '/tags';
+            try {
+              await api(path, {
+                method: 'PATCH',
+                headers: {
+                  'content-type': 'application/json',
+                  'x-admin-token': token,
+                },
+                body: JSON.stringify({ tags: tagsArr }),
+              });
+              setStatus('Updated tags for #' + item.id, false);
+              refresh();
+            } catch (err) {
+              setStatus('Tag update failed: ' + err.message, true);
+            }
+          });
+        }
+
+        tr.querySelector('[data-role="delete"]').addEventListener('click', async () => {
+          if (!confirm('Delete #' + item.id + '?')) return;
+          let path = '';
+          if (kind === 'message') {
+            path = '/api/tulipworld/messages/' + encodeURIComponent(item.id);
+          } else if (scope === 'tulipworld') {
+            path = '/api/tulipworld/files/' + encodeURIComponent(item.id);
+          } else {
+            path = '/api/amyboardworld/files/' + encodeURIComponent(item.id);
+          }
+          try {
+            await api(path, {
+              method: 'DELETE',
+              headers: { 'x-admin-token': token },
+            });
+            setStatus('Deleted #' + item.id, false);
+            refresh();
+          } catch (err) {
+            setStatus('Delete failed: ' + err.message, true);
+          }
+        });
+
+        rows.appendChild(tr);
+      }
+      setStatus('Loaded ' + items.length + ' items', false);
+    } catch (err) {
+      setStatus('Load failed: ' + err.message, true);
+      rows.innerHTML = '';
+    }
+  }
+
+  document.getElementById('saveTokenBtn').addEventListener('click', function() {
+    localStorage.setItem('world_admin_token', getToken());
+    setStatus('Saved token locally', false);
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', refresh);
+
+  document.getElementById('uploadBtn').addEventListener('click', async () => {
+    const username = (document.getElementById('uploadUser').value || '').trim();
+    const description = (document.getElementById('uploadDesc').value || '').trim();
+    const scope = (document.getElementById('uploadScope').value || 'amyboardworld').trim();
+    const fileEl = document.getElementById('uploadFile');
+    const file = fileEl.files && fileEl.files[0];
+    if (!file) {
+      setStatus('Choose a .tar file first', true);
+      return;
+    }
+    const data = new FormData();
+    data.append('username', username);
+    data.append('description', description);
+    data.append('file', file);
+    try {
+      await api('/api/' + scope + '/upload', { method: 'POST', body: data });
+      setStatus('Upload complete', false);
+      fileEl.value = '';
+      refresh();
+    } catch (err) {
+      setStatus('Upload failed: ' + err.message, true);
+    }
+  });
+
+  document.getElementById('msgBtn').addEventListener('click', async () => {
+    const username = (document.getElementById('msgUser').value || '').trim();
+    const content = (document.getElementById('msgText').value || '').trim();
+    try {
+      await api('/api/tulipworld/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username, content }),
+      });
+      setStatus('Message posted', false);
+      document.getElementById('msgText').value = '';
+      refresh();
+    } catch (err) {
+      setStatus('Message post failed: ' + err.message, true);
+    }
+  });
+
+  async function refreshGenerations() {
+    const token = getToken();
+    if (!token) { setStatus('Admin token required', true); return; }
+    const params = new URLSearchParams();
+    params.set('limit', '250');
+    const gq = (document.getElementById('genQ').value || '').trim();
+    if (gq) params.set('q', gq);
+    const gip = (document.getElementById('genIp').value || '').trim();
+    if (gip) params.set('ip', gip);
+    const genRows = document.getElementById('genRows');
+    try {
+      const data = await api('/api/admin/generations?' + params.toString(), {
+        headers: { 'x-admin-token': token },
+      });
+      const gens = Array.isArray(data.generations) ? data.generations : [];
+      genRows.innerHTML = '';
+      for (const g of gens) {
+        const tr = document.createElement('tr');
+        const okHtml = g.ok ? '<span class="ok">ok</span>' : '<span class="err">fail</span>';
+        const shareHtml = g.share ? '<span class="ok">yes</span>' : '<span class="small">no</span>';
+        const uploadedHtml = g.uploaded_file_id
+          ? '<span class="ok">#' + esc(g.uploaded_file_id) + '</span>'
+          : '<span class="small">&mdash;</span>';
+        const code = g.code || '';
+        const codeCell = code
+          ? '<details><summary class="small">' + esc(code.length) + ' chars</summary><pre class="code">' + esc(code) + '</pre></details>'
+          : '<span class="small">&mdash;</span>';
+        tr.innerHTML = '' +
+          '<td class="small">' + esc(fmtTs(g.time)) + '</td>' +
+          '<td class="mono small">' + esc(g.client_ip || '') + '</td>' +
+          '<td class="desc">' + esc(g.prompt || '') + '</td>' +
+          '<td>' + okHtml + '</td>' +
+          '<td>' + shareHtml + '</td>' +
+          '<td>' + uploadedHtml + '</td>' +
+          '<td class="mono small">' + esc(g.model || '') + '</td>' +
+          '<td class="mono small">' + esc(g.input_tokens) + ' / ' + esc(g.output_tokens) + '</td>' +
+          '<td>' + codeCell + '</td>';
+        genRows.appendChild(tr);
+      }
+      setStatus('Loaded ' + gens.length + ' generations', false);
+    } catch (err) {
+      setStatus('Generations load failed: ' + err.message, true);
+    }
+  }
+
+  document.getElementById('genRefreshBtn').addEventListener('click', refreshGenerations);
+
+  async function runDebugGenerate() {
+    const token = getToken();
+    if (!token) { setStatus('Admin token required', true); return; }
+    const prompt = document.getElementById('dbgPrompt').value;
+    if (!prompt.trim()) { setStatus('Enter a prompt for the debug generator', true); return; }
+    const current = document.getElementById('dbgCurrent').value;
+    const meta = document.getElementById('dbgMeta');
+    const out = document.getElementById('dbgOut');
+    const btn = document.getElementById('dbgRunBtn');
+    meta.textContent = ''; out.textContent = ''; btn.disabled = true;
+    setStatus('Generating...', false);
+    try {
+      const data = await api('/api/admin/generate_debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ description: prompt, current_code: current.trim() ? current : null }),
+      });
+      if (data.error) {
+        meta.innerHTML = '<span class="err">error</span>';
+        out.textContent = data.error;
+      } else {
+        const verdict = data.ok
+          ? '<span class="ok">valid sketch</span>'
+          : '<span class="err">invalid: ' + esc(data.reason || '') + '</span>';
+        const lookups = data.tool_calls || 0;
+        const cached = data.cache_read_input_tokens || 0;
+        meta.innerHTML = verdict + ' &middot; ' + esc(data.model || '') + ' &middot; ' +
+          esc(lookups) + ' lookup' + (lookups === 1 ? '' : 's') + ' &middot; ' +
+          esc(data.input_tokens) + ' in' + (cached ? ' (+' + esc(cached) + ' cached)' : '') +
+          ' / ' + esc(data.output_tokens) + ' out &middot; ' +
+          esc((data.code || '').length) + ' chars';
+        out.textContent = data.code || '(no code returned)';
+      }
+      setStatus('Debug generate done', false);
+    } catch (err) {
+      setStatus('Debug generate failed: ' + err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('dbgRunBtn').addEventListener('click', runDebugGenerate);
+
+  adminTokenEl.value = localStorage.getItem('world_admin_token') || localStorage.getItem('amyboardworld_admin_token') || '';
+  refresh();
+  refreshGenerations();
+})();
+</script>
+</body>
+</html>

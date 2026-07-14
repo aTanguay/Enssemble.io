@@ -1,0 +1,10 @@
+Quantity,Designator,Description,Part Number,Manufacturer
+
+"1","C3","CAP CHIP 0402 100nF 10% 16V X7R","0402B104K160CT","Walsin"
+"1","C4","CAP CHIP 0603 4.7uF 10% 16V X5R","GRM188R61C475KAAJD","Murata"
+"1","D1","LED SMD 0603 GREEN/568 15mcd 120^","HSMG-C190","Broadcom"
+"1","ENCODER1","ENCODER 2b quadrature, 15PPR, 30 detents, shaft 15mm D-Cut, switch 350+-100gf, SMD 15x18x20mm","PEC11J-9215F-S0015","Bourns"
+"2","J1, J2","CONN JST 4POS SIDE 1MM TIN QWIIC","SM04B-SRSS-TB(LF)(SN)","JST"
+"1","R1","RES CHIP 0402 1k 1% 1/16W","CRCW04021K00FKEDC","Vishay"
+"5","R6, R7, R8, R10, R11","RES CHIP 0402 4k7 1% 1/16W","RC0402FR-074K7L","YAGEO"
+"1","U1","IC Cortex M0, 32b MCU, 32KB Flash, 6KB RAM, VDD 2-3.6V, -40°C to 85°C, QFN20 3x3mm","STM32C011F4U6TR","ST Microelectronics"
