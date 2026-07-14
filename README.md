@@ -6,6 +6,10 @@ The goal of Enssemble is to make experimenting with what I like to call a 'scrap
 
 To create a band, we make a collection of sound making devices, sequenced through one BLE MIDI source. I personally use AUMv3 on iOS for this. This is your brain (and can be a voice of course). Just about any kind of sequencing you'd want is possible this way...from generative, to traditional straight forward compositions.
 
+
+![placement](/site/GitGraphics/Placement_01.png)
+
+
 **The Member Nodes** 
 
 Battery>Node/Amp>Speaker
