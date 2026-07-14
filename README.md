@@ -14,6 +14,10 @@ To get going, you need nodes, or 'members' to your band. The cheapest way I have
 
 Now that's the cheapest 'good' option, but there's nothing stopping you from using the tiny speaker on the Xiao, or hooking up a stadium PA. That's your business.
 
+
+![Overview](/site/GitGraphics/Overview_01.png)
+
+
 **Enssemble Firmwares**
 
 Right now, there are two paths for Enssemble firmware. The aforementioned Xiao, and then the ['AmyBoard'](https://www.amyboard.com/) . This is a very cool, very cheap, very capable board that gives you some things that the Xiao doesn't have. The downside being the lack of built in amplifier. The Xiao has a surprisingly capable little Class D amp inside. So when powered and connected to a bookshelf speaker, it's ready to go. You'll be surprised!
