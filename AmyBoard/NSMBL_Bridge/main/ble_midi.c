@@ -1,5 +1,6 @@
 #include "ble_midi.h"
 #include "config.h"
+#include "bridge_state.h"
 
 #include "esp_log.h"
 #include "esp_nimble_hci.h"
@@ -98,9 +99,10 @@ static void parse_midi_message(const uint8_t *data, uint16_t len)
         uint8_t ch0     = running_status & 0x0F;         // 0-indexed channel
         uint8_t channel = ch0 + 1;                       // 1-indexed for event
 
-        // Bridge input filter: forward all channels (BRIDGE_IN == BRIDGE_ALL),
-        // or only the single configured channel.
-        if (BRIDGE_IN != BRIDGE_ALL && channel != BRIDGE_IN) {
+        // Bridge input filter (runtime, set by the UI knob): 0 = forward all
+        // channels, else only the selected channel.
+        uint8_t in_filter = bridge_in();
+        if (in_filter != BRIDGE_ALL && channel != in_filter) {
             i += need;
             continue;
         }
@@ -144,6 +146,7 @@ static void parse_midi_message(const uint8_t *data, uint16_t len)
         }
 
         i += need;
+        bridge_note_in(event.type, event.data1, event.data2);  // IN activity/monitor
         xQueueSend(s_midi_queue, &event, 0);
     }
 }
