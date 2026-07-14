@@ -40,17 +40,19 @@ The overall experiment here is in 'spatial-like music'...meaning music experienc
 
 *(Note, these firmwares were made largely through vibe coding with human planning and oversight. If that sits with you wrong, for the love of god, keep it to yourself and don't use these free tools that somehow a computer is 100% responsible for, but also, somehow took me dozens of man-hours to make)* Eye-roll emoji
 
+**Yeah yeah, make with the BINS**
 
-## What each node does
+You probably want to know what you're looking for (feature-wise), which you'll find below, but here's the 
+[Latest Release](https://github.com/aTanguay/Enssemble.io/releases/tag/v0.2.0)
+Use the ESP browser based flasher, and go nuts.
 
-- Each unit advertises as a **BLE MIDI 1.0 peripheral** — connects to iOS as distinct nodes.
-- Receives Note On/Off, Program Change, Pitch Bend, and CCs
-- Per-unit MIDI channel filtering — each band member responds only to its assigned channel
-- Real-time sound shaping via standard MIDI CCs (filter, reverb, chorus, volume, pan)
-- Two platforms: **AMYboard** (ESP32-S3 + AMY software synth) and **XIAO MIDI Synthesizer** (ESP32-C3 + SAM2695 hardware GM wavetable)
-- AMYboard firmware variants: **AMY synth** (256 patches) and **sample player** (WAV kits from SD)
-- iOS control surface via **Mozaic** scripts
-
+flash a unit without a toolchain:
+```bash
+esptool.py --chip esp32c3 -p /dev/cu.usbmodem101 -b 460800 write_flash 0x0 NSMBL_Eenoo_v0.1.bin
+```
+or at 
+[ESP TOOL ONLINE](https://espressif.github.io/esptool-js/)
+Connects, flash starting at 0x00 and go to town.
 
 
 ## The Band (The Firmwares)
@@ -61,13 +63,23 @@ The overall experiment here is in 'spatial-like music'...meaning music experienc
 | **Prynz** | Prince | 2 | Lead | Synth Leads | Amy and Xiao |
 | **Botsee** | Bootsie Collins | 3 | Bass | Synth Bass | Amy and Xiao |
 | **Moroh** | Giorgio Moroder | 5 | Arps / Sequences | Synth Lead | Amy and Xiao |
-| **8OhAte** | The 808 | 10 | Drums | GM Kits | Xiao Only |
-| **Kneel**  | Neal Peart      | 10      | Drums                | Sample Kits   | Amy Only     |
+| **8OhAte** | The 808 | 10 | Drums | GM Drum Kits | Xiao Only |
+| **Kneel**  | Neal Peart      | 10      | Drums                | Sampled Kits   | Amy Only     |
 | **Dapht**  | Daft Punk       | 4       | General Samples      | TBD           | Amy Only     |
 | **Garee** | Gary Numan | ALL | MIDI Out to Hardware | None | Amy Only |
 
 Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing each board.
 
+
+## What each node does (for the most part)
+
+- Each unit advertises as a **BLE MIDI 1.0 peripheral** — connects to iOS as distinct nodes.
+- Receives Note On/Off, Program Change, Pitch Bend, and CCs
+- Per-unit MIDI channel filtering — each band member responds only to its assigned channel
+- Real-time sound shaping via standard MIDI CCs (filter, reverb, chorus, volume, pan)
+- Two platforms: **AMYboard** (ESP32-S3 + AMY software synth) and **XIAO MIDI Synthesizer** (ESP32-C3 + SAM2695 hardware GM wavetable)
+- AMYboard firmware variants: **AMY synth** (256 patches) and **sample player** (WAV kits from SD)
+- iOS control surface via **Mozaic** scripts
 
 
 ## Hardware
@@ -100,13 +112,7 @@ Hardware GM wavetable synth via SAM2695 chip. 128 GM patches, full CC passthroug
 
 Per-unit identities live in `SeeedXiaoMIDI/NSMBL_Synth/configs/` — copy one to `main/config.h` before flashing so each module shows up with its own BLE name in AUM: **NSMBL_Eenoo** (pads, ch1), **NSMBL_Prynz** (lead, ch2), **NSMBL_Botsee** (bass, ch3), **NSMBL_Moroh** (arps, ch5), **NSMBL_8OhAte** (drums, ch10). Each unit listens only on its own channel.
 
-Prebuilt per-member BINs are attached to the [v0.1.0 release](https://github.com/aTanguay/Enssemble.io/releases/tag/v0.1.0) — flash a unit without a toolchain:
-```bash
-esptool.py --chip esp32c3 -p /dev/cu.usbmodem101 -b 460800 write_flash 0x0 NSMBL_Eenoo_v0.1.bin
-```
-or at 
-[ESP TOOL ONLINE](https://espressif.github.io/esptool-js/)
-Connects, flash starting at 0x00 and go to town.
+Prebuilt per-member BINs are attached to the [v0.1.0 release](https://github.com/aTanguay/Enssemble.io/releases/tag/v0.1.0) — 
 
 **Hardware buttons** (patch browsing, each press auditions the voice):
 
@@ -126,24 +132,6 @@ Connects, flash starting at 0x00 and go to town.
 There are many precompiled firmwares available for these boards. The easiest way to flash them is with the online tool from esspressiff. Depending on how many nodes you're making, you can install some or all of the firmwares, depending on their usage. 
 [ESP TOOL ONLINE](https://espressif.github.io/esptool-js/)
 
-
-## Building
-
-Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/) v5.x. Not sure I'd do this
-
-```bash
-# Source ESP-IDF
-source ~/esp/esp-idf/export.sh
-
-# Copy band member config, then build and flash
-cp AmyBoard/configs/config_Prynz.h AmyBoard/NSMBL_Synth/main/config.h
-cd AmyBoard/NSMBL_Synth
-idf.py build
-idf.py -p /dev/cu.usbmodem* flash monitor
-```
-
-
-
 ## iOS Setup
 
 1. Power on units — each plays a startup bleep
@@ -157,7 +145,7 @@ iOS handles 13+ simultaneous BLE connections — the full band is well within ra
 
 
 
-## Mozaic Control Surface
+## Mozaic Control Surface (still very rough)
 
 iOS scripts in `Mozaic/` for the [Mozaic](https://ruismaker.com) MIDI scripting app:
 
