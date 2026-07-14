@@ -1,5 +1,4 @@
-# [Enssemble — The Digital Scrap Band](https://enssemble.io/)
-
+![Header](/site/GitGraphics/Banner_01.png)
 
 **The Scrap Band**
 
