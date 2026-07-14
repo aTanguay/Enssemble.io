@@ -3,6 +3,8 @@
 **The Scrap Band**
 
 The goal of Enssemble is to make experimenting with what I like to call a 'scrap band' a lot easier and cheaper. Placing musical members/nodes around your space gives you a completely different (and fun) experience compared to traditional two channel stereo. I personally strive to make them 100% wireless, so one can experiment at will. Running cables breaks the flow - and the metaphor.
+![Stereo](/site/GitGraphics/Stereo_01.png)
+
 
 To create a band, we make a collection of sound making devices, sequenced through one BLE MIDI source. I personally use AUMv3 on iOS for this. This is your brain (and can be a voice of course). Just about any kind of sequencing you'd want is possible this way...from generative, to traditional straight forward compositions.
 
