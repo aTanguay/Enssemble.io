@@ -84,18 +84,19 @@ Named configs in `AmyBoard/configs/` — copy to `main/config.h` before flashing
 
 ## Hardware
 
-### AMYboard (ESP32-S3 + AMY)
+### AMYboard (ESP32-S3 Core)
 - [AMYboard](https://www.amyboard.com/) — open-source, $29
 - AMY software synth engine — 250 oscillators, 128 Juno-6 + 128 DX7 patches, GM drums
 - ESP32-S3 dual-core: BLE MIDI on core 0, audio rendering on core 1
 - 8MB octal PSRAM, SD card, I2S line out (3.5mm TRS stereo)
 - I2C port for accessories, MIDI in/out (TRS), CV in/out, S/PDIF
+- Support for I2C encoder and 128x128 OLED that most people use.
 
-### Seeed Studio XIAO MIDI Synthesizer - ESP32-C3 + SAM2695
+### Seeed Studio XIAO MIDI Synthesizer - ESP32-C3 Core + SAM2695 Audio Chip
 - [Seeed Studio XIAO MIDI Synthesizer](https://www.seeedstudio.com/XIAO-MIDI-Synthesizer-p-6462.html)  — $22, tiny form factor, single-core RISC-V
-- Dream SAM2695 — hardware GM wavetable synth, 128 GM patches + drum kits, 64-voice polyphony
+- [Dream SAM2695](GM_VOICINGS.md) — hardware GM wavetable synth, 128 GM patches + drum kits, 64-voice polyphony
 - UART MIDI at 31250 baud, full CC/NRPN passthrough (filter, envelope, vibrato, reverb/chorus types)
-- 3.5mm stereo line out + onboard Class-D amplifier
+- 3.5mm stereo line out + onboard Class-D amplifier (that's not bad at all)
 
 
 
